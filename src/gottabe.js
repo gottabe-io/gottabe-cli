@@ -95,14 +95,18 @@ determinetarget();
 function isOutdated(sources, dest) {
     if (typeof sources == 'string')
         sources = [sources];
-    var i = 0, len = sources.length;
-    var mtimed = new Date(fs.statSync(dest));
-    for (; i < len; i++) {
-        var mtimes = new Date(fs.statSync(sources[i]));
-        if (mtimed.getTime() < mtimes.getTime())
-            return true;
-    }
-    return false;
+	try {
+		var i = 0, len = sources.length;
+		var mtimed = new Date(fs.statSync(dest));
+		for (; i < len; i++) {
+			var mtimes = new Date(fs.statSync(sources[i]));
+			if (mtimed.getTime() < mtimes.getTime())
+				return true;
+		}
+		return false;
+	} catch (e) {
+		return true;
+	}
 }
 
 // resolve command dependencies
@@ -170,7 +174,7 @@ commands.forEach(command => {
         for (var i = 0; i < sourceFiles.length; i++) {
             if (!isOutdated(sourceFiles[i], destFiles[i]))
                 continue;
-            var cmd = tool.compile(sourceFiles[i], destFiles[i], target.includeDirs, target.defines, target.options);
+            var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs), target.defines, target.options);
             console.log(cmd);
             try {
                 execSync(cmd);
@@ -184,8 +188,10 @@ commands.forEach(command => {
             process.exit(1);
         }
 
-        if (!isOutdated(destFiles, './' + target.name + '/' + build.package.name)) {
-            var cmd = tool.link(build.type, destFiles, './' + target.name + '/' + build.package.name, target.libraryPaths, target.libraries, target.linkoptions)
+		var artifactName = tool.artifactName(build, target);
+		
+        if (isOutdated(destFiles, './' + target.name + '/' + artifactName)) {
+            var cmd = tool.link(build.type, destFiles, './' + target.name + '/' + artifactName, target.libraryPaths, target.libraries, target.linkoptions)
             console.log(cmd);
             try {
                 execSync(cmd);
