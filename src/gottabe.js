@@ -29,6 +29,7 @@ var arch = process.arch,
 })();
 
 var fs = require('fs');
+var pathmod = require('path');
 
 var rjson = require("./relaxed-json.js");
 
@@ -109,6 +110,37 @@ function isOutdated(sources, dest) {
 	}
 }
 
+function getFiles(path, rfiles){
+    var idxCard = 0;
+    if ((idxCard = path.indexOf('*')) != -1) {
+        var folder;
+        if (idxCard > 0)
+            folder = path.substring(0,idxCard);
+        else
+            folder = './';
+        var filter = idxCard < path.length ? path.substring(idxCard + 1) : '';
+        var files = fs.readdirSync(folder);
+        files.forEach(function(fname){
+            if (fs.lstatSync(folder + fname).isFile()) {
+                if ((!filter || fname.endsWith(filter)) && rfiles.indexOf(folder + fname) == -1)
+                rfiles.push(folder + fname);
+            }
+        });
+    } else {
+        if (fs.lstatSync(path).isFile() && sourceFiles.indexOf(path) == -1) {
+            rfiles.push(path);
+        }
+    }
+}
+
+function isDir(path) {
+    try {
+        return fs.lstatSync(inc).isDirectory();
+    } catch (e) {
+        return false;
+    }
+}
+
 // resolve command dependencies
 var cmds = commands;
 commands = [];
@@ -116,9 +148,17 @@ cmds.forEach(cmd => {
     if (cmd == 'install') {
         if (cmds.indexOf('build') == -1)
             commands.push('build');
+        if (cmds.indexOf('package') == -1)
+            commands.push('package');
         commands.push(cmd);
+    } else if (cmd == 'package') {
+        if (cmds.indexOf('build') == -1)
+            commands.push('build');
+        if (commands.indexOf(cmd) == -1)
+            commands.push(cmd);
     } else {
-        commands.push(cmd);
+        if (commands.indexOf(cmd) == -1)
+            commands.push(cmd);
     }
 });
 
@@ -134,39 +174,26 @@ commands.forEach(command => {
 
         var sourceFiles = [];
 
-        function getSourceFile(path){
-            var idxCard = 0;
-            if ((idxCard = path.indexOf('*')) != -1) {
-                var folder;
-                if (idxCard > 0)
-                    folder = path.substring(0,idxCard);
-                else
-                    folder = './';
-                var filter = idxCard < path.length ? path.substring(idxCard + 1) : '';
-                var files = fs.readdirSync(folder);
-                files.forEach(function(fname){
-                    if (fs.lstatSync(folder + fname).isFile()) {
-                        if ((!filter || fname.endsWith(filter)) && sourceFiles.indexOf(folder + fname) == -1)
-                            sourceFiles.push(folder + fname);
-                    }
-                });
-            } else {
-                if (fs.lstatSync(path).isFile() && sourceFiles.indexOf(path) == -1) {
-                    sourceFiles.push(path);
-                }
-            }
-        }
+        sources.forEach(path => getFiles(path, sourceFiles));
 
-        sources.forEach(getSourceFile);
+        var destFolder = './build/' + target.name + '/';
 
         var destFiles = sourceFiles.map(function(src){
-            return './' + target.name + '/' + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i,'$1\.o');
+            return destFolder + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i,'$1.o');
         });
 
         const { execSync } = require('child_process');
 
-        if (!fs.existsSync('./' + target.name)) {
-            fs.mkdirSync('./' + target.name);
+        if (!fs.existsSync('./build')) {
+            fs.mkdirSync('./build');
+        }
+
+        if (!fs.existsSync('./build/' + target.name)) {
+            fs.mkdirSync('./build/' + target.name);
+        }
+
+        if (!fs.existsSync(destFolder + 'bin')) {
+            fs.mkdirSync(destFolder + 'bin');
         }
 
         var hasErrors = false;
@@ -190,8 +217,8 @@ commands.forEach(command => {
 
 		var artifactName = tool.artifactName(build, target);
 		
-        if (isOutdated(destFiles, './' + target.name + '/' + artifactName)) {
-            var cmd = tool.link(build.type, destFiles, './' + target.name + '/' + artifactName, target.libraryPaths, target.libraries, target.linkoptions)
+        if (isOutdated(destFiles, destFolder + 'bin/' + artifactName)) {
+            var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths, target.libraries, target.linkoptions)
             console.log(cmd);
             try {
                 execSync(cmd);
@@ -203,12 +230,47 @@ commands.forEach(command => {
 
         const { execSync } = require('child_process');
 
-        if (fs.existsSync('./' + target.name)) {
+        if (fs.existsSync('./build')) {
             if (plat == 'win32')
-                execSync('rmdir /S /Q .\\' + target.name);
+                execSync('rmdir /S /Q .\\build');
             else
-                execSync('rm -f ./' + target.name);
+                execSync('rm -f ./build');
         }
+
+    } else if (command == 'package') {
+
+        var destFolder = './build/' + target.name + '/';
+
+        if (!fs.existsSync(destFolder + 'package')) {
+            fs.mkdirSync(destFolder + 'package');
+        }
+        var indludes = build.package.includes || [];
+        if (indludes.length > 0 && !fs.existsSync(destFolder + 'package/include')) {
+            fs.mkdirSync(destFolder + 'package/include');
+        }
+        var tool = require('./' + target.toolchain + '.js');
+		var artifactName = tool.artifactName(build, target);
+
+        var fsx = require('fs-extra');
+        // copy includes
+        indludes.forEach(inc => {
+            console.log('Copying ' + inc + ' to package');
+            if (isDir(inc)) {
+                fsx.copySync(inc,destFolder + 'package/include');
+            } else {
+                var files = [];
+                getFiles(inc, files);
+                files.forEach(src => {
+                    var idxBar = src.replace('[/\]','/').lastIndexOf('/');
+                    var dest = destFolder + 'package/include/' + 
+                            (idxBar != -1 ? src.substring(idxBar+1) : src);
+                    fsx.copySync(src, dest);
+                });
+            }
+        });
+
+        console.log('Copying binaries to package');
+        fsx.copySync(destFolder + 'bin', destFolder + 'package');
 
     } else {
         console.error('Syntax error\nTry to call "gonnabe help" to see help.');

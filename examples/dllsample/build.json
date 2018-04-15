@@ -1,0 +1,50 @@
+{
+    name : 'DllSample',
+    description: 'A simple example of dll',
+    author:'Alan N. Lohse',
+    source : 'https://github.com/alanlohse/gottabe/examples/dllsample',
+    version: '1.0',
+    type : 'shared library',
+    dependencies : [
+    ],
+    includeDirs : [],
+    sources:['./src/*.cpp'],
+    targets : [
+        {
+            name:'Debug',
+            arch: 'x64',
+            platform: 'win32',
+            toolchain: 'mingw',
+            includeDirs : [],
+            sources:[],
+            options: '-O0 -g3 -Wall',
+            defines:{
+                'DEBUG' : '',
+                'BUILDING_EXAMPLE_DLL' : ''
+            },
+            libraryPaths : [],
+            libraries : [],
+            linkoptions : ''
+        },
+        {
+            name:'Release',
+            arch: 'x64',
+            platform: 'win32',
+            toolchain: 'mingw',
+            includeDirs : [],
+            sources:[],
+            options: '-O3 -Wall',
+            defines:{
+                'BUILDING_EXAMPLE_DLL' : ''
+            },
+            libraryPaths : [],
+            libraries : [],
+            linkoptions : '-s'
+        }
+    ],
+    package : {
+        name : 'dllsample',
+        includes :['./src/*.h'],
+        other:[]
+    }
+}
