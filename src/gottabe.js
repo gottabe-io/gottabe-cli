@@ -15,45 +15,47 @@
     You should have received a copy of the GNU General Public License
     along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
+const VERSION = '0.0.1-dev';
+
 var arch = process.arch,
     plat = process.platform,
     build, target, targetName,
-    commands = {clean:false, build:false, package:false, install:false, test: false};
+    commands = { clean: false, build: false, package: false, install: false, test: false };
 
 const program = require('commander');
 
 program
     .command('clean')
     .description('Clean the files generated in a build.')
-    .action(function(){
+    .action(function() {
         commands.clean = true;
     });
-program    
+program
     .command('build')
     .description('Build the project.')
-    .action(function(){
+    .action(function() {
         commands.build = true;
     });
-program    
+program
     .command('package')
     .description('Package a project previously built.')
-    .action(function(){
+    .action(function() {
         commands.package = true;
     });
-program    
+program
     .command('install')
     .description('Install a project previously packaged.')
-    .action(function(){
+    .action(function() {
         commands.install = true;
     });
-program    
+program
     .command('test')
     .description('Test a project.')
-    .action(function(){
+    .action(function() {
         commands.test = true;
     });
-program    
-    .version('0.0.1-dev', '-v, --version')
+program
+    .version(VERSION, '-v, --version')
     .option('-T, --target <targetName>', 'Choose a target.')
     .option('-xs, --export-sources', 'Export the sources when build a package.');
 
@@ -65,12 +67,13 @@ if (!(commands.clean || commands.build || commands.package || commands.install |
 
 var fs = require('fs');
 var pathmod = require('path');
+var utils = require('./utils.js');
 
 var rjson = require("relaxed-json");
 
 const BUILD_FILE = './build.json';
 
-if (!fs.exists(BUILD_FILE)) {
+if (!fs.existsSync(BUILD_FILE)) {
     console.error('No ' + BUILD_FILE.substring(2) + ' found in the current directory.');
     process.exit(1);
 }
@@ -80,40 +83,42 @@ data = rjson.transform(data.toString());
 build = JSON.parse(data);
 
 var defaultBuild = {
-    name : '',
+    name: '',
     description: '',
-    author:'',
+    author: '',
     version: '0.0.1',
-    type : 'executable', // shared library, static library or executable 
-    dependencies : [],
-    includeDirs : [],
-    sources:[],
-    targets : [],
-    package : {},
-    outputDir : '',
-    repositories : []
+    type: 'executable', // shared library, static library or executable 
+    dependencies: [],
+    includeDirs: [],
+    sources: [],
+    targets: [],
+    package: {},
+    outputDir: '',
+    repositories: []
 };
 
 var defaultTarget = {
-    name:'',
+    name: '',
     arch: '',
     platform: '',
     toolchain: '',
-    includeDirs : [],
-    sources:[],
+    includeDirs: [],
+    sources: [],
     options: '',
-    defines:{},
-    libraryPaths : [],
-    libraries : [],
-    linkoptions : ''
+    defines: {},
+    libraryPaths: [],
+    libraries: [],
+    linkoptions: ''
 };
 
 build = Object.assign(defaultBuild, build);
 
+console.log('GottaBe v%s is now building your project!', VERSION);
+
 function determinetarget() {
     if (!targetName)
         console.log('Trying to find a target for arch: ' + arch + ' and platform ' + plat);
-    build.targets.every(function(conf){
+    build.targets.every(function(conf) {
         if (targetName) {
             if (targetName == conf.name) {
                 target = Object.assign(defaultTarget, conf);
@@ -134,54 +139,6 @@ function determinetarget() {
 }
 
 determinetarget();
-
-function isOutdated(sources, dest) {
-    if (typeof sources == 'string')
-        sources = [sources];
-	try {
-		var i = 0, len = sources.length;
-		var mtimed = new Date(fs.statSync(dest));
-		for (; i < len; i++) {
-			var mtimes = new Date(fs.statSync(sources[i]));
-			if (mtimed.getTime() < mtimes.getTime())
-				return true;
-		}
-		return false;
-	} catch (e) {
-		return true;
-	}
-}
-
-function getFiles(path, rfiles){
-    var idxCard = 0;
-    if ((idxCard = path.indexOf('*')) != -1) {
-        var folder;
-        if (idxCard > 0)
-            folder = path.substring(0,idxCard);
-        else
-            folder = './';
-        var filter = idxCard < path.length ? path.substring(idxCard + 1) : '';
-        var files = fs.readdirSync(folder);
-        files.forEach(function(fname){
-            if (fs.lstatSync(folder + fname).isFile()) {
-                if ((!filter || fname.endsWith(filter)) && rfiles.indexOf(folder + fname) == -1)
-                rfiles.push(folder + fname);
-            }
-        });
-    } else {
-        if (fs.lstatSync(path).isFile() && sourceFiles.indexOf(path) == -1) {
-            rfiles.push(path);
-        }
-    }
-}
-
-function isDir(path) {
-    try {
-        return fs.lstatSync(inc).isDirectory();
-    } catch (e) {
-        return false;
-    }
-}
 
 commands.package |= commands.install;
 commands.build |= commands.package;
@@ -209,12 +166,12 @@ if (commands.build) {
 
     var sourceFiles = [];
 
-    sources.forEach(path => getFiles(path, sourceFiles));
+    sources.forEach(path => utils.getFiles(path, sourceFiles));
 
     var destFolder = './build/' + target.name + '/';
 
-    var destFiles = sourceFiles.map(function(src){
-        return destFolder + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i,'$1.o');
+    var destFiles = sourceFiles.map(function(src) {
+        return destFolder + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i, '$1.o');
     });
 
     const { execSync } = require('child_process');
@@ -234,7 +191,7 @@ if (commands.build) {
     var hasErrors = false;
 
     for (var i = 0; i < sourceFiles.length; i++) {
-        if (!isOutdated(sourceFiles[i], destFiles[i]))
+        if (!utils.isOutdated(sourceFiles[i], destFiles[i]))
             continue;
         var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs), target.defines, target.options);
         console.log(cmd);
@@ -251,14 +208,13 @@ if (commands.build) {
     }
 
     var artifactName = tool.artifactName(build, target);
-    
-    if (isOutdated(destFiles, destFolder + 'bin/' + artifactName)) {
+
+    if (utils.isOutdated(destFiles, destFolder + 'bin/' + artifactName)) {
         var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths, target.libraries, target.linkoptions)
         console.log(cmd);
         try {
             execSync(cmd);
-        } catch (e) {
-        }
+        } catch (e) {}
     }
 } // end of build command
 
@@ -280,21 +236,21 @@ if (commands.package) {
     // copy includes
     indludes.forEach(inc => {
         console.log('Copying ' + inc + ' to package');
-        if (isDir(inc)) {
-            fsx.copySync(inc,destFolder + 'package/include');
+        if (utils.isDir(inc)) {
+            fsx.copySync(inc, destFolder + 'package/include');
         } else {
             var files = [];
-            getFiles(inc, files);
+            utils.getFiles(inc, files);
             files.forEach(src => {
-                var idxBar = src.replace('[/\]','/').lastIndexOf('/');
-                var dest = destFolder + 'package/include/' + 
-                        (idxBar != -1 ? src.substring(idxBar+1) : src);
+                var idxBar = src.replace('[/\]', '/').lastIndexOf('/');
+                var dest = destFolder + 'package/include/' +
+                    (idxBar != -1 ? src.substring(idxBar + 1) : src);
                 fsx.copySync(src, dest);
             });
         }
     });
 
-    if (exportSources) {
+    if (program.exportSources) {
         // TODO export sources
     }
 
@@ -306,7 +262,7 @@ if (commands.package) {
 if (commands.install) {
     const os = require('os');
     var gottabe_packages = os.homedir() + '/.gottabe/packages';
-    
+
 }
 
 

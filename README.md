@@ -3,7 +3,10 @@ A simple multi-platform builder for c++.
 
 ## Introduction
 
-All tools for building c++ projects are always painful to configure.
+All tools for building c++ projects may be in the most cases a painful task to accomplish. You have to deal with a lot of complexity which could be avoided if you had a tool that would do it for you.
+There are good tools to build and they do it very well, but if you change a little the configurations you will have a lot of trouble.
+
+The idea of GottaBe is to stay simple in all cases.
 
 ## Manual
 
@@ -16,7 +19,6 @@ The command line above will build your project.
 
 ### Commands
 
-* help
 * clean
 * build
 * package
