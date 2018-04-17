@@ -17,36 +17,65 @@
 
 var arch = process.arch,
     plat = process.platform,
-    build, target, targetName, commands = [];
+    build, target, targetName,
+    commands = {clean:false, build:false, package:false, install:false, test: false};
 
-(function(){
-    var args = process.argv.splice(2,Number.MAX_VALUE);
-    function syntaxCheck(i){
-        if (i >= args.length) {
-            console.error('Syntax error\nTry to call "gonnabe help" to see help.');
-            process.exit(1);
-        }
-    }
-    
-    for (var i = 0; i < args.length; ++i) {
-        if (args[i].startsWith('-')) {
-            var option = args[i].substring(1);
-            if (option == 'T') {
-                syntaxCheck(++i);
-                targetName = args[i];
-            }
-        } else {
-            commands.push(args[i]);
-        }
-    }
-})();
+const program = require('commander');
+
+program
+    .command('clean')
+    .description('Clean the files generated in a build.')
+    .action(function(){
+        commands.clean = true;
+    });
+program    
+    .command('build')
+    .description('Build the project.')
+    .action(function(){
+        commands.build = true;
+    });
+program    
+    .command('package')
+    .description('Package a project previously built.')
+    .action(function(){
+        commands.package = true;
+    });
+program    
+    .command('install')
+    .description('Install a project previously packaged.')
+    .action(function(){
+        commands.install = true;
+    });
+program    
+    .command('test')
+    .description('Test a project.')
+    .action(function(){
+        commands.test = true;
+    });
+program    
+    .version('0.0.1-dev', '-v, --version')
+    .option('-T, --target <targetName>', 'Choose a target.')
+    .option('-xs, --export-sources', 'Export the sources when build a package.');
+
+program.parse(process.argv);
+
+if (!(commands.clean || commands.build || commands.package || commands.install || commands.test)) {
+    program.help();
+}
 
 var fs = require('fs');
 var pathmod = require('path');
 
-var rjson = require("./relaxed-json.js");
+var rjson = require("relaxed-json");
 
-var data = fs.readFileSync('./build.json');
+const BUILD_FILE = './build.json';
+
+if (!fs.exists(BUILD_FILE)) {
+    console.error('No ' + BUILD_FILE.substring(2) + ' found in the current directory.');
+    process.exit(1);
+}
+
+var data = fs.readFileSync(BUILD_FILE);
 data = rjson.transform(data.toString());
 build = JSON.parse(data);
 
@@ -154,141 +183,131 @@ function isDir(path) {
     }
 }
 
-// resolve command dependencies
-var cmds = commands;
-commands = [];
-cmds.forEach(cmd => {
-    if (cmd == 'install') {
-        if (cmds.indexOf('build') == -1)
-            commands.push('build');
-        if (cmds.indexOf('package') == -1)
-            commands.push('package');
-        commands.push(cmd);
-    } else if (cmd == 'package') {
-        if (cmds.indexOf('build') == -1)
-            commands.push('build');
-        if (commands.indexOf(cmd) == -1)
-            commands.push(cmd);
-    } else {
-        if (commands.indexOf(cmd) == -1)
-            commands.push(cmd);
+commands.package |= commands.install;
+commands.build |= commands.package;
+
+if (commands.clean) {
+
+    const { execSync } = require('child_process');
+
+    if (fs.existsSync('./build')) {
+        if (plat == 'win32')
+            execSync('rmdir /S /Q .\\build');
+        else
+            execSync('rm -f ./build');
     }
-});
 
-commands.forEach(command => {
+}
 
-    if (command == 'build') {
+if (commands.build) {
 
-        var tool = require('./' + target.toolchain + '.js');
+    var tool = require('./' + target.toolchain + '.js');
 
-        var sources = build.sources;
-        if (target.sources)
-            sources = sources.concat(target.sources);
+    var sources = build.sources;
+    if (target.sources)
+        sources = sources.concat(target.sources);
 
-        var sourceFiles = [];
+    var sourceFiles = [];
 
-        sources.forEach(path => getFiles(path, sourceFiles));
+    sources.forEach(path => getFiles(path, sourceFiles));
 
-        var destFolder = './build/' + target.name + '/';
+    var destFolder = './build/' + target.name + '/';
 
-        var destFiles = sourceFiles.map(function(src){
-            return destFolder + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i,'$1.o');
-        });
+    var destFiles = sourceFiles.map(function(src){
+        return destFolder + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i,'$1.o');
+    });
 
-        const { execSync } = require('child_process');
+    const { execSync } = require('child_process');
 
-        if (!fs.existsSync('./build')) {
-            fs.mkdirSync('./build');
+    if (!fs.existsSync('./build')) {
+        fs.mkdirSync('./build');
+    }
+
+    if (!fs.existsSync('./build/' + target.name)) {
+        fs.mkdirSync('./build/' + target.name);
+    }
+
+    if (!fs.existsSync(destFolder + 'bin')) {
+        fs.mkdirSync(destFolder + 'bin');
+    }
+
+    var hasErrors = false;
+
+    for (var i = 0; i < sourceFiles.length; i++) {
+        if (!isOutdated(sourceFiles[i], destFiles[i]))
+            continue;
+        var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs), target.defines, target.options);
+        console.log(cmd);
+        try {
+            execSync(cmd);
+        } catch (e) {
+            hasErrors = true;
         }
+    }
 
-        if (!fs.existsSync('./build/' + target.name)) {
-            fs.mkdirSync('./build/' + target.name);
-        }
-
-        if (!fs.existsSync(destFolder + 'bin')) {
-            fs.mkdirSync(destFolder + 'bin');
-        }
-
-        var hasErrors = false;
-
-        for (var i = 0; i < sourceFiles.length; i++) {
-            if (!isOutdated(sourceFiles[i], destFiles[i]))
-                continue;
-            var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs), target.defines, target.options);
-            console.log(cmd);
-            try {
-                execSync(cmd);
-            } catch (e) {
-                hasErrors = true;
-            }
-        }
-
-        if (hasErrors) {
-            console.error('Errors found when building ' + target.name);
-            process.exit(1);
-        }
-
-		var artifactName = tool.artifactName(build, target);
-		
-        if (isOutdated(destFiles, destFolder + 'bin/' + artifactName)) {
-            var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths, target.libraries, target.linkoptions)
-            console.log(cmd);
-            try {
-                execSync(cmd);
-            } catch (e) {
-            }
-        }
-    } // end of build command
-    else if (command == 'clean') {
-
-        const { execSync } = require('child_process');
-
-        if (fs.existsSync('./build')) {
-            if (plat == 'win32')
-                execSync('rmdir /S /Q .\\build');
-            else
-                execSync('rm -f ./build');
-        }
-
-    } else if (command == 'package') {
-
-        var destFolder = './build/' + target.name + '/';
-
-        if (!fs.existsSync(destFolder + 'package')) {
-            fs.mkdirSync(destFolder + 'package');
-        }
-        var indludes = build.package.includes || [];
-        if (indludes.length > 0 && !fs.existsSync(destFolder + 'package/include')) {
-            fs.mkdirSync(destFolder + 'package/include');
-        }
-        var tool = require('./' + target.toolchain + '.js');
-		var artifactName = tool.artifactName(build, target);
-
-        var fsx = require('fs-extra');
-        // copy includes
-        indludes.forEach(inc => {
-            console.log('Copying ' + inc + ' to package');
-            if (isDir(inc)) {
-                fsx.copySync(inc,destFolder + 'package/include');
-            } else {
-                var files = [];
-                getFiles(inc, files);
-                files.forEach(src => {
-                    var idxBar = src.replace('[/\]','/').lastIndexOf('/');
-                    var dest = destFolder + 'package/include/' + 
-                            (idxBar != -1 ? src.substring(idxBar+1) : src);
-                    fsx.copySync(src, dest);
-                });
-            }
-        });
-
-        console.log('Copying binaries to package');
-        fsx.copySync(destFolder + 'bin', destFolder + 'package');
-
-    } else {
-        console.error('Syntax error\nTry to call "gonnabe help" to see help.');
+    if (hasErrors) {
+        console.error('Errors found when building ' + target.name);
         process.exit(1);
     }
-});
+
+    var artifactName = tool.artifactName(build, target);
+    
+    if (isOutdated(destFiles, destFolder + 'bin/' + artifactName)) {
+        var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths, target.libraries, target.linkoptions)
+        console.log(cmd);
+        try {
+            execSync(cmd);
+        } catch (e) {
+        }
+    }
+} // end of build command
+
+if (commands.package) {
+
+    var destFolder = './build/' + target.name + '/';
+
+    if (!fs.existsSync(destFolder + 'package')) {
+        fs.mkdirSync(destFolder + 'package');
+    }
+    var indludes = build.package.includes || [];
+    if (indludes.length > 0 && !fs.existsSync(destFolder + 'package/include')) {
+        fs.mkdirSync(destFolder + 'package/include');
+    }
+    var tool = require('./' + target.toolchain + '.js');
+    var artifactName = tool.artifactName(build, target);
+
+    var fsx = require('fs-extra');
+    // copy includes
+    indludes.forEach(inc => {
+        console.log('Copying ' + inc + ' to package');
+        if (isDir(inc)) {
+            fsx.copySync(inc,destFolder + 'package/include');
+        } else {
+            var files = [];
+            getFiles(inc, files);
+            files.forEach(src => {
+                var idxBar = src.replace('[/\]','/').lastIndexOf('/');
+                var dest = destFolder + 'package/include/' + 
+                        (idxBar != -1 ? src.substring(idxBar+1) : src);
+                fsx.copySync(src, dest);
+            });
+        }
+    });
+
+    if (exportSources) {
+        // TODO export sources
+    }
+
+    console.log('Copying binaries to package');
+    fsx.copySync(destFolder + 'bin', destFolder + 'package');
+
+}
+
+if (commands.install) {
+    const os = require('os');
+    var gottabe_packages = os.homedir() + '/.gottabe/packages';
+    
+}
+
 
 //end of file

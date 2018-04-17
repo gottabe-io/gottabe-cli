@@ -1,0 +1,35 @@
+{
+  "name": "gottabe",
+  "version": "0.0.1-dev",
+  "preferGlobal": true,
+  "description": "Very easy tool for building and packaging c++ libraries and executables",
+  "main": "gottabe",
+  "engines": {
+    "node": ">=4.0.0"
+  },
+  "bin": {
+    "gottabe": "./bin/gottabe"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alanlohse/gottabe"
+  },
+  "bugs": {
+    "url": "https://github.com/alanlohse/gottabe/issues",
+    "email": "alanlohse@gmail.com"
+  },
+  "keywords": [
+    "gottabe",
+    "c++",
+    "build"
+  ],
+  "dependencies": {
+    "fs-extra": "^5.0.0",
+    "relaxed-json": "^1.0.1",
+    "commander": "^2.15.1"
+  },
+  "devDependencies": {},
+  "author": "Alan N. Lohse",
+  "license": "GPL-3.0"
+}
