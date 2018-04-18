@@ -57,7 +57,8 @@ program
 program
     .version(VERSION, '-v, --version')
     .option('-T, --target <targetName>', 'Choose a target.')
-    .option('-xs, --export-sources', 'Export the sources when build a package.');
+    .option('-xs, --export-sources', 'Export the sources when build a package.')
+    .option('-nt, --no-tests', 'No tests will be called after building.');
 
 program.parse(process.argv);
 
