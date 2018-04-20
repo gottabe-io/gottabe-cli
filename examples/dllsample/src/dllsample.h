@@ -11,19 +11,19 @@ extern "C" {
 #define EXAMPLE_DLL __declspec(dllimport)
 #endif
 
-void __stdcall EXAMPLE_DLL hello(const char *s);
+EXAMPLE_DLL void __stdcall hello(const char *s);
 
-int EXAMPLE_DLL Double(int x);
+EXAMPLE_DLL int Double(int x);
 
 #ifdef __cplusplus
 }
 #endif
 
 // NOTE: this function is not declared extern "C"
-void EXAMPLE_DLL CppFunc(void);
+EXAMPLE_DLL void CppFunc(void);
 
 // NOTE: this class must not be declared extern "C"
-class EXAMPLE_DLL MyClass
+EXAMPLE_DLL class MyClass
 {
 public:
         MyClass() {};
