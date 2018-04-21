@@ -13,7 +13,6 @@ A simple multi-platform builder for c++.
 4. [Options](#options)
     1. [-v, --version](#-version)
     2. [-T, --target](#-target-lt-targetname-gt-)
-    3. [-xs, --export-sources](#-export-sources)
     4. [-nt, --no-tests](#-no-tests)
 5. [Configuration](#configuration)
 
@@ -111,15 +110,6 @@ Eg.:
     gottabe install -T Release_Win32
 ```
 
-#### --export-sources
-
-Export the sources when building a package. You can type also -xs as an alias for this option.
-
-Eg.:
-```
-    gottabe package -xs
-```
-
 #### --no-tests
 
 Or -nt prevents the project of being tested.
@@ -145,6 +135,7 @@ This configuration is a simple json file with relaxed syntax and it must follow 
     ],
     includeDirs : [],                           // extra include directories
     sources:['./src/samples.cpp'],              // source files ou directories
+    testSources:['./test_src/*.cpp']            // test sources
     targets : [                                 // the targets list
         {
             name:'Debug',                       // the name of the target

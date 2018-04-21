@@ -57,7 +57,6 @@ program
 program
     .version(VERSION, '-v, --version')
     .option('-T, --target <targetName>', 'Choose a target.')
-    .option('-xs, --export-sources', 'Export the sources when build a package.')
     .option('-nt, --no-tests', 'No tests will be called after building.');
 
 program.parse(process.argv);
@@ -92,6 +91,7 @@ var defaultBuild = {
     dependencies: [],
     includeDirs: [],
     sources: [],
+    testSources: [],
     targets: [],
     package: {},
     outputDir: '',
@@ -191,10 +191,12 @@ if (commands.build) {
 
     var hasErrors = false;
 
+    var includeDeps = [];
+
     for (var i = 0; i < sourceFiles.length; i++) {
         if (!utils.isOutdated(sourceFiles[i], destFiles[i]))
             continue;
-        var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs), target.defines, target.options);
+        var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs).concat(includeDeps), target.defines, target.options);
         console.log(cmd);
         try {
             execSync(cmd);
@@ -210,8 +212,11 @@ if (commands.build) {
 
     var artifactName = tool.artifactName(build, target);
 
+    var libraryPathDeps = [], libraryDeps = [];
+
     if (utils.isOutdated(destFiles, destFolder + 'bin/' + artifactName)) {
-        var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths, target.libraries, target.linkoptions)
+        var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths.concat(libraryPathDeps), 
+                target.libraries.concat(libraryDeps), target.linkoptions)
         console.log(cmd);
         try {
             execSync(cmd);
@@ -221,10 +226,15 @@ if (commands.build) {
 
 if (commands.package) {
 
-    var destFolder = './build/' + target.name + '/';
+    var destFolder = './build/';
+    var targetFolder = './build/' + target.name + '/';
 
     if (!fs.existsSync(destFolder + 'package')) {
         fs.mkdirSync(destFolder + 'package');
+    }
+    var destBinFolder = destFolder + 'package/' + target.arch + '_' + target.platform + '_' + target.toolchain;
+    if (!fs.existsSync(destBinFolder)) {
+        fs.mkdirSync(destBinFolder);
     }
     var indludes = build.package.includes || [];
     if (indludes.length > 0 && !fs.existsSync(destFolder + 'package/include')) {
@@ -242,27 +252,27 @@ if (commands.package) {
         } else {
             var files = [];
             utils.getFiles(inc, files);
+            console.log(files);
             files.forEach(src => {
                 var idxBar = src.replace('[/\]', '/').lastIndexOf('/');
                 var dest = destFolder + 'package/include/' +
                     (idxBar != -1 ? src.substring(idxBar + 1) : src);
+                console.log(src + ' => ' + dest);
                 fsx.copySync(src, dest);
             });
         }
     });
 
-    if (program.exportSources) {
-        // TODO export sources
-    }
-
     console.log('Copying binaries to package');
-    fsx.copySync(destFolder + 'bin', destFolder + 'package');
+    fsx.copySync(targetFolder + 'bin', destBinFolder);
 
 }
 
 if (commands.install) {
-    const os = require('os');
-    var gottabe_packages = os.homedir() + '/.gottabe/packages';
+
+    var install = require('./install.js');
+
+    install.installPackage(build);
 
 }
 

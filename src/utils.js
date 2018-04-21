@@ -16,6 +16,7 @@
     along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
 var fs = require('fs');
+var glob = require('glob');
 
 module.exports.isOutdated = function(sources, dest) {
     if (typeof sources == 'string')
@@ -35,33 +36,39 @@ module.exports.isOutdated = function(sources, dest) {
     }
 };
 
-module.exports.getFiles = function(path, rfiles) {
-    var idxCard = 0;
-    if ((idxCard = path.indexOf('*')) != -1) {
-        var folder;
-        if (idxCard > 0)
-            folder = path.substring(0, idxCard);
-        else
-            folder = './';
-        var filter = idxCard < path.length ? path.substring(idxCard + 1) : '';
-        var files = fs.readdirSync(folder);
-        files.forEach(function(fname) {
-            if (fs.lstatSync(folder + fname).isFile()) {
-                if ((!filter || fname.endsWith(filter)) && rfiles.indexOf(folder + fname) == -1)
-                    rfiles.push(folder + fname);
-            }
-        });
-    } else {
-        if (fs.lstatSync(path).isFile() && sourceFiles.indexOf(path) == -1) {
-            rfiles.push(path);
-        }
-    }
-};
-
-module.exports.isDir = function(path) {
+function isDir(path) {
     try {
         return fs.lstatSync(inc).isDirectory();
     } catch (e) {
         return false;
     }
+}
+
+function isFile(path) {
+    try {
+        return fs.lstatSync(path).isFile();
+    } catch (e) {
+        return false;
+    }
+}
+
+function uniquePush(array,item) {
+    if (array.indexOf(item) == -1)
+        array.push(item);
+}
+
+module.exports.getFiles = function(path, rfiles, ext) {
+    if (isDir(path)) {
+        if (path.endsWith('/') || path.endsWith('/'))
+            path = path.substring(0,path.length() - 1);
+        glob.sync(path + (ext ? '/**/*.' + ext : '/**/*'))
+            .forEach(file => uniquePush(rfiles,file));
+    } else if (isFile(path)) {
+        uniquePush(rfiles,path);
+    } else if (path.indexOf('*') != -1) {
+        glob.sync(path)
+            .forEach(file => uniquePush(rfiles,file));
+    }
 };
+
+module.exports.isDir = isDir;

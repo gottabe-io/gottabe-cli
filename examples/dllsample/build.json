@@ -9,6 +9,7 @@
     ],
     includeDirs : [],
     sources:['./src/*.cpp'],
+    testSources:['test_src/*.cpp'],
     targets : [
         {
             name:'Debug',
