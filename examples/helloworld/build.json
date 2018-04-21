@@ -7,23 +7,23 @@
     type : 'executable',
     dependencies : [
     ],
-    includeDirs : ['./include'],
+    includeDirs : [],
     sources:['./src/*.cpp'],
     targets : [
         {
             name:'Debug',
             arch: 'x64',
             platform: 'win32',
-            toolchain: 'mingw',
+            toolchain: 'msvc14',
             includeDirs : [],
             sources:['./src/*.cpp'],
-            options: '-O0 -g3 -Wall',
+            options: {optimization : 0, debug : 3, warnings : 'all', other :''},
             defines:{
                 'DEBUG' : ''
             },
             libraryPaths : [],
             libraries : [],
-            linkoptions : ''
+            linkoptions : {}
         },
         {
             name:'Release',
@@ -32,16 +32,16 @@
             toolchain: 'mingw',
             includeDirs : [],
             sources:['./src/*.cpp'],
-            options: '-O3 -Wall',
+            options: {optimization : 3, debug : 0, warnings : 'all', other :''},
             defines:{},
             libraryPaths : [],
             libraries : [],
-            linkoptions : '-s'
+            linkoptions : {debugInformation : false}
         }
     ],
     package : {
         name : 'hello',
-        includes :['./include'],
+        includes :[],
         other:[]
     }
 }

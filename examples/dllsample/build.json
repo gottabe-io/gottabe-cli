@@ -18,14 +18,14 @@
             toolchain: 'msvc14',
             includeDirs: [],
             sources: [],
-            options: '',
+            options: {optimization : 0, debug : 3, warnings : 'all', other :''},
             defines: {
                 'DEBUG': '',
                 'BUILDING_EXAMPLE_DLL': ''
             },
             libraryPaths: [],
             libraries: [],
-            linkoptions: ''
+            linkoptions: {}
         },
         {
             name: 'Release',
@@ -34,13 +34,13 @@
             toolchain: 'mingw',
             includeDirs: [],
             sources: [],
-            options: '-O3 -Wall',
+            options: {optimization : 3, debug : 0, warnings : 'all', other :''},
             defines: {
                 'BUILDING_EXAMPLE_DLL': ''
             },
             libraryPaths: [],
             libraries: [],
-            linkoptions: '-s'
+            linkoptions: {debugInformation : false}
         }
     ],
     package: {

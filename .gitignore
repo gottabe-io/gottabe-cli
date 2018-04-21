@@ -60,3 +60,4 @@ typings/
 /package-lock.json
 /.vscode
 /examples/dllsample/build
+/examples/helloworld/build

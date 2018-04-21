@@ -105,11 +105,11 @@ var defaultTarget = {
     toolchain: '',
     includeDirs: [],
     sources: [],
-    options: '',
+    options: {optimization : 0, debug : 3, warnings : 'all', other :''},
     defines: {},
     libraryPaths: [],
     libraries: [],
-    linkoptions: ''
+    linkoptions: {debugInformation : true}
 };
 
 build = Object.assign(defaultBuild, build);
@@ -117,6 +117,7 @@ build = Object.assign(defaultBuild, build);
 console.log('GottaBe v%s is now building your project!', VERSION);
 
 function determinetarget() {
+    var targetName = program.target;
     if (!targetName)
         console.log('Trying to find a target for arch: ' + arch + ' and platform ' + plat);
     build.targets.every(function(conf) {
@@ -172,7 +173,7 @@ if (commands.build) {
     var destFolder = './build/' + target.name + '/';
 
     var destFiles = sourceFiles.map(function(src) {
-        return destFolder + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i, '$1.o');
+        return destFolder + src.replace(/^.*?\/([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i, '$1');
     });
 
     const { execSync } = require('child_process');

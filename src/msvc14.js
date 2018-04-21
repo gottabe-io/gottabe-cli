@@ -21,6 +21,18 @@ function getDefines(defines) {
     return defs.map(def => ' /D' + def.k + (def.v ? '="' + def.v + '"' : '')).join(' ');
 }
 
+function compilerOptions(opts) {
+    return (opts.optimization == 0 ? ' /Od' : opts.optimization > 0 && opts.optimization < 3 ? ' /O' + opts.optimization : opts.optimization == 3 ? ' /Ox' : '') +
+           (opts.debug > 0 && opts.debug <= 3 ? ' /Zi' : '') +
+           (opts.warnings ? ' /W' + opts.warnings : '') +
+           (opts.other ? opts.other : '');
+}
+
+function linkerOptions(opts) {
+    return (opts.debugInformation ? ' /DEBUG:FULL' : ' /DEBUG:NONE') +
+           (opts.other ? opts.other : '');
+}
+
 /**
  * 
  * @param {String} srcFile 
@@ -30,25 +42,25 @@ function getDefines(defines) {
  * @param {String} options 
  */
 module.exports.compile = function(srcFile, destFile, includeDirs, defines, options) {
-    return 'cl' +
+    return 'cl /nologo' +
         getDefines(defines) +
         (includeDirs.length > 0 ? ' "/I' + includeDirs.map(inc => inc.replace(/\//g, '\\')).join('" "/I') + '"' : '') +
-        (options ? ' ' + options : '') +
-        ' /c "/Fo' + destFile.replace(/\//g, '\\') + '" "' + srcFile.replace(/\//g, '\\') + '"';
+        (options ? compilerOptions(options) : '') +
+        ' /c "/Fo' + destFile.replace(/\//g, '\\') + '.obj" "' + srcFile.replace(/\//g, '\\') + '"';
 };
 
 module.exports.link = function(type, sources, destFile, libraryPaths, libraries, options) {
     if (type == 'static library')
-        return 'lib rcs ' + destFile +
-            ' ' + sources.join(' ');
-    return 'cl' +
-        (libraryPaths.length > 0 ? ' "-L' + libraryPaths.map(inc => inc.replace(/\//g, '\\')).join('" "-L') + '"' : '') +
-        (options ? ' ' + options : '') +
-        ' -o "' + destFile.replace(/\//g, '\\') +
-        '" ' + sources.map(s => '"' + s + '"').join(' ') +
-        (libraries.length > 0 ? ' -l' + libraries.join(' -l') : '') +
-        (type == 'shared library' ? ' -shared "-Wl,--out-implib,' +
-            (destFile.replace(/\//g, '\\').replace(/^(.*?)\/?([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i, '$1/$2')) + '.lib"' : '');
+        return 'lib /NOLOGO /OUT:"' + destFile + '"' +
+            (options ? linkerOptions(options) : '') +
+            ' "' + sources.join('" ') + '"';
+    return 'link /nologo' + (type == 'shared library' ? ' /DLL' : '') +
+        (libraries.length > 0 ? ' ' + libraries.join(' ') : '') +
+        (libraryPaths.length > 0 ? ' /LIBPATH:"' + libraryPaths.map(inc => inc.replace(/\//g, '\\')).join('" /LIBPATH:"') + '"' : '') +
+        (options ? linkerOptions(options) : '') +
+        ' /OUT:"' + destFile.replace(/\//g, '\\') + '"' +
+        ' /PDBALTPATH:"' + destFile.replace(/\//g, '\\').replace(/\\[^\\]+\.[a-z0-9~_-]+$/i, '') + 
+        '" ' + sources.map(s => '"' + s.replace(/\//g, '\\') + '.obj"').join(' ');
 };
 
 module.exports.artifactName = function(build, target) {

@@ -141,17 +141,25 @@ This configuration is a simple json file with relaxed syntax and it must follow 
             name:'Debug',                       // the name of the target
             arch: 'x64',                        // the archtecture, it can be x64 or x86
             platform: 'win32',                  // the platform win32, linux etc.
-            toolchain: 'mingw',                 // the toolchain used. In the current version only mingw is available
+            toolchain: 'mingw',                 // the toolchain used. In the current version only mingw and msvc14 are available
             includeDirs : [],                   // extra include directories for this target
             sources:[],                         // source files only for this target
-            options: '-O0 -g3 -Wall',           // options passed to the compiled
+            options: {                          // options passed to the compiler
+                optimization : 0,               // optimization level. It can be between 0 and 3
+                debug : 3,                      // debug level. It can be between 0 and 3
+                warnings : 'all',               // warnings
+                other :''                       // other options passed directly to the compiler
+            },
             defines:{                           // defines -D <name>=<value>
                 'DEBUG' : '',
                 'BUILDING_EXAMPLE_DLL' : ''
             },
             libraryPaths : [],                  // library paths passed to the linker
             libraries : [],                     // library names
-            linkoptions : ''                    // options passed to the linker
+            linkoptions : {                     // options passed to the linker
+                debugInformation : true,       // disables generating debug information. Default is true
+                other : ''                      // other linker options
+            }
         },
         {
             name:'Release',
@@ -160,13 +168,19 @@ This configuration is a simple json file with relaxed syntax and it must follow 
             toolchain: 'mingw',
             includeDirs : [],
             sources:[],
-            options: '-O3 -Wall',
+            options: {
+                optimization : 3,
+                debug : 0,
+                other :''
+            },
             defines:{
                 'BUILDING_EXAMPLE_DLL' : ''
             },
             libraryPaths : [],
             libraries : [],
-            linkoptions : '-s'
+            linkoptions : {
+                debugInformation : false
+            }
         }
     ], 
     package : {                                 // details about the package

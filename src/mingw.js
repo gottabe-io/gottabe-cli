@@ -21,12 +21,24 @@ function getDefines(defines) {
     return defs.map(def => ' -D ' + def.k + (def.v ? '="' + def.v + '"' : '')).join(' ');
 }
 
+function compilerOptions(opts) {
+    return (opts.optimization >= 0 && opts.optimization <= 3 ? ' -O' + opts.optimization : '') +
+           (opts.debug > 0 && opts.debug <= 3 ? ' -g' + opts.debug : '') +
+           (opts.warnings ? ' -W' + opts.warnings : '') +
+           (opts.other ? opts.other : '');
+}
+
+function linkerOptions(opts) {
+    return (opts.debugInformation ? '' : ' -s') +
+           (opts.other ? opts.other : '');
+}
+
 module.exports.compile = function(srcFile, destFile, includeDirs, defines, options) {
     return 'g++' +
         getDefines(defines) +
         (includeDirs.length > 0 ? ' "-I' + includeDirs.join('" "-I') + '"' : '') +
-        (options ? ' ' + options : '') +
-        ' -c -o "' + destFile + '" "' + srcFile + '"';
+        (options ? compilerOptions(options) : '') +
+        ' -c -o "' + destFile + '.o" "' + srcFile + '"';
 };
 
 module.exports.link = function(type, sources, destFile, libraryPaths, libraries, options) {
@@ -35,9 +47,9 @@ module.exports.link = function(type, sources, destFile, libraryPaths, libraries,
             ' ' + sources.join(' ');
     return 'g++' +
         (libraryPaths.length > 0 ? ' "-L' + libraryPaths.join('" "-L') + '"' : '') +
-        (options ? ' ' + options : '') +
+        (options ? linkerOptions(options) : '') +
         ' -o "' + destFile +
-        '" ' + sources.map(s => '"' + s + '"').join(' ') +
+        '" ' + sources.map(s => '"' + s + '.o"').join(' ') +
         (libraries.length > 0 ? ' -l' + libraries.join(' -l') : '') +
         (type == 'shared library' ? ' -shared "-Wl,--out-implib,' +
             (destFile.replace(/^(.*?)\/?([a-z0-9_~-]+)\.[a-z0-9_~-]+$/i, '$1/lib$2')) + '.a"' : '');
