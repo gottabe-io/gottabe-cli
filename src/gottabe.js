@@ -202,6 +202,7 @@ if (commands.build) {
             execSync(cmd);
         } catch (e) {
             hasErrors = true;
+            console.log(e.output.toString());
         }
     }
 
@@ -220,7 +221,9 @@ if (commands.build) {
         console.log(cmd);
         try {
             execSync(cmd);
-        } catch (e) {}
+        } catch (e) {
+            console.log(e.output.toString());
+        }
     }
 } // end of build command
 
