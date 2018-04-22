@@ -38,7 +38,7 @@ module.exports.isOutdated = function(sources, dest) {
 
 function isDir(path) {
     try {
-        return fs.lstatSync(inc).isDirectory();
+        return fs.lstatSync(path).isDirectory();
     } catch (e) {
         return false;
     }

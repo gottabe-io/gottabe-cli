@@ -55,11 +55,11 @@ module.exports.link = function(type, sources, destFile, libraryPaths, libraries,
             (options ? linkerOptions(options) : '') +
             ' "' + sources.join('" ') + '"';
     return 'link /nologo' + (type == 'shared library' ? ' /DLL' : '') +
-        (libraries.length > 0 ? ' ' + libraries.join(' ') : '') +
+        (libraries.length > 0 ? ' ' + libraries.map(s => s + '.lib').join(' ') : '') +
         (libraryPaths.length > 0 ? ' /LIBPATH:"' + libraryPaths.map(inc => inc.replace(/\//g, '\\')).join('" /LIBPATH:"') + '"' : '') +
         (options ? linkerOptions(options) : '') +
         ' /OUT:"' + destFile.replace(/\//g, '\\') + '"' +
-        ' /PDBALTPATH:"' + destFile.replace(/\//g, '\\').replace(/\\[^\\]+\.[a-z0-9~_-]+$/i, '') + 
+//        ' /PDBALTPATH:"' + destFile.replace(/\//g, '\\').replace(/\\[^\\]+\.[a-z0-9~_-]+$/i, '') + 
         '" ' + sources.map(s => '"' + s.replace(/\//g, '\\') + '.obj"').join(' ');
 };
 
@@ -77,3 +77,5 @@ module.exports.artifactName = function(build, target) {
         return build.package.name;
     }
 };
+
+module.exports.OBJECT_EXTENSION = 'obj';

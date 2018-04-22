@@ -44,7 +44,7 @@ module.exports.compile = function(srcFile, destFile, includeDirs, defines, optio
 module.exports.link = function(type, sources, destFile, libraryPaths, libraries, options) {
     if (type == 'static library')
         return 'ar rcs ' + destFile +
-            ' ' + sources.join(' ');
+            ' ' + sources.map(s => '"' + s + '.o"').join(' ');
     return 'g++' +
         (libraryPaths.length > 0 ? ' "-L' + libraryPaths.join('" "-L') + '"' : '') +
         (options ? linkerOptions(options) : '') +
@@ -69,3 +69,5 @@ module.exports.artifactName = function(build, target) {
         return build.package.name;
     }
 };
+
+module.exports.OBJECT_EXTENSION = 'o';

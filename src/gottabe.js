@@ -57,7 +57,9 @@ program
 program
     .version(VERSION, '-v, --version')
     .option('-T, --target <targetName>', 'Choose a target.')
-    .option('-nt, --no-tests', 'No tests will be called after building.');
+    .option('-nt, --no-tests', 'No tests will be called after building.')
+    .option('--arch <arch>', 'Override the default architecture.')
+    .option('--platform <platform>', 'Override the default platform.');
 
 program.parse(process.argv);
 
@@ -65,13 +67,18 @@ if (!(commands.clean || commands.build || commands.package || commands.install |
     program.help();
 }
 
-var fs = require('fs');
-var pathmod = require('path');
-var utils = require('./utils.js');
-
-var rjson = require("relaxed-json");
+const fs = require('fs');
+const pathmod = require('path');
+const utils = require('./utils.js');
+const rjson = require("relaxed-json");
+const install = require('./install.js');
+const Set = require('es6-set');
 
 const BUILD_FILE = './build.json';
+
+arch = program.arch || arch;
+
+plat = program.platform || plat;
 
 if (!fs.existsSync(BUILD_FILE)) {
     console.error('No ' + BUILD_FILE.substring(2) + ' found in the current directory.');
@@ -81,6 +88,10 @@ if (!fs.existsSync(BUILD_FILE)) {
 var data = fs.readFileSync(BUILD_FILE);
 data = rjson.transform(data.toString());
 build = JSON.parse(data);
+
+function uniqueArray(array) {
+    return Array.from(new Set(array));
+}
 
 var defaultBuild = {
     name: '',
@@ -133,11 +144,20 @@ function determinetarget() {
         return true;
     });
     if (!target) {
-        console.error('Target ' + targetName + ' not found.');
+        console.error('Target ' + (targetName ? targetName + ' ' : '') + 'not found.');
         process.exit(1);
     } else {
         console.log('Target found: ' + target.name);
     }
+}
+
+function findTarget(build, arch, plat, toolchain) {
+    var targs = build.targets.filter(conf =>
+        conf.arch == arch && conf.platform == plat && conf.toolchain == toolchain
+    );
+    if (targs.length > 0)
+        return targs[0];
+    throw new Error('No target found for the dependency');
 }
 
 determinetarget();
@@ -192,10 +212,14 @@ if (commands.build) {
 
     var hasErrors = false;
 
-    var includeDeps = [];
+    var packages = [];
+    build.dependencies.forEach(dep => {
+        install.getPackage(dep, arch, plat, target.toolchain, packages);
+    });
+    var includeDeps = uniqueArray(packages.map(pack => pack.includeDir));
 
     for (var i = 0; i < sourceFiles.length; i++) {
-        if (!utils.isOutdated(sourceFiles[i], destFiles[i]))
+        if (!utils.isOutdated(sourceFiles[i], destFiles[i] + '.' + tool.OBJECT_EXTENSION))
             continue;
         var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs).concat(includeDeps), target.defines, target.options);
         console.log(cmd);
@@ -214,11 +238,20 @@ if (commands.build) {
 
     var artifactName = tool.artifactName(build, target);
 
-    var libraryPathDeps = [], libraryDeps = [];
+    var apt = arch + '_' + plat + '_' + build.toolchain;
+    // get the library paths and libraries from dependencies
+    var libraryPathDeps = uniqueArray(packages.map(pack => pack[apt])), 
+        libraryDeps = packages.map(pack => pack.build.package.name);
 
-    if (utils.isOutdated(destFiles, destFolder + 'bin/' + artifactName)) {
+    // get all libraries from dependencies for the target
+    packages.forEach(pack => {
+        var target = findTarget(pack.build, arch, plat, toolchain);
+        libraryDeps = libraryDeps.concat(target.libraries);
+    });
+
+    if (utils.isOutdated(destFiles.map(s => s + '.' + tool.OBJECT_EXTENSION), destFolder + 'bin/' + artifactName)) {
         var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths.concat(libraryPathDeps), 
-                target.libraries.concat(libraryDeps), target.linkoptions)
+                uniqueArray(target.libraries.concat(libraryDeps)), target.linkoptions)
         console.log(cmd);
         try {
             execSync(cmd);
@@ -258,7 +291,7 @@ if (commands.package) {
             utils.getFiles(inc, files);
             console.log(files);
             files.forEach(src => {
-                var idxBar = src.replace('[/\]', '/').lastIndexOf('/');
+                var idxBar = src.replace(/\//g, '/').lastIndexOf('/');
                 var dest = destFolder + 'package/include/' +
                     (idxBar != -1 ? src.substring(idxBar + 1) : src);
                 console.log(src + ' => ' + dest);
@@ -273,8 +306,6 @@ if (commands.package) {
 }
 
 if (commands.install) {
-
-    var install = require('./install.js');
 
     install.installPackage(build);
 

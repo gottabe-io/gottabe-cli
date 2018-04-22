@@ -139,7 +139,7 @@ This configuration is a simple json file with relaxed syntax and it must follow 
     targets : [                                 // the targets list
         {
             name:'Debug',                       // the name of the target
-            arch: 'x64',                        // the archtecture, it can be x64 or x86
+            arch: 'x64',                        // the archtecture, it can be x32, x64, arm or arm64
             platform: 'win32',                  // the platform win32, linux etc.
             toolchain: 'mingw',                 // the toolchain used. In the current version only mingw and msvc14 are available
             includeDirs : [],                   // extra include directories for this target
@@ -154,8 +154,8 @@ This configuration is a simple json file with relaxed syntax and it must follow 
                 'DEBUG' : '',
                 'BUILDING_EXAMPLE_DLL' : ''
             },
-            libraryPaths : [],                  // library paths passed to the linker
-            libraries : [],                     // library names
+            libraryPaths : [],                  // library paths passed to the linker. Take care it's not possible to use for dependencies
+            libraries : [],                     // library names. Take care because these aren't treated as dependencies
             linkoptions : {                     // options passed to the linker
                 debugInformation : true,       // disables generating debug information. Default is true
                 other : ''                      // other linker options
