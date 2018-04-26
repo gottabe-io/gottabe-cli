@@ -22,16 +22,20 @@
   "keywords": [
     "gottabe",
     "c++",
-    "build"
+    "build",
+    "multi-platform-builder",
+    "c-plus-plus",
+    "build-tool",
+    "dependency-manager"
   ],
   "dependencies": {
+    "archiver": "^2.1.1",
+    "commander": "^2.15.1",
+    "es6-set": "^0.1.5",
     "fs-extra": "^5.0.0",
     "relaxed-json": "^1.0.1",
-    "commander": "^2.15.1",
-    "targz": "^1.0.1",
-    "glob": "^7.1.2",
     "request": "^2.81.0",
-    "es6-set": "^0.1.5"
+    "unzipper": "^0.8.13"
   },
   "devDependencies": {},
   "author": "Alan N. Lohse",

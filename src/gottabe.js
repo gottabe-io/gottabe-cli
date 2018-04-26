@@ -68,10 +68,8 @@ if (!(commands.clean || commands.build || commands.package || commands.install |
 }
 
 const fs = require('fs');
-const pathmod = require('path');
 const utils = require('./utils.js');
 const rjson = require("relaxed-json");
-const install = require('./install.js');
 const Set = require('es6-set');
 
 const BUILD_FILE = './build.json';
@@ -180,7 +178,8 @@ if (commands.clean) {
 
 if (commands.build) {
 
-    var tool = require('./' + target.toolchain + '.js');
+    const tool = require('./' + target.toolchain + '.js');
+    const install = require('./dependencies.js');
 
     var sources = build.sources;
     if (target.sources)
@@ -214,51 +213,60 @@ if (commands.build) {
 
     var packages = [];
     build.dependencies.forEach(dep => {
-        install.getPackage(dep, arch, plat, target.toolchain, packages);
+        packages.push(install.getPackage(dep, arch, plat, target.toolchain, packages));
     });
     var includeDeps = uniqueArray(packages.map(pack => pack.includeDir));
 
-    for (var i = 0; i < sourceFiles.length; i++) {
-        if (!utils.isOutdated(sourceFiles[i], destFiles[i] + '.' + tool.OBJECT_EXTENSION))
-            continue;
-        var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs).concat(includeDeps), target.defines, target.options);
-        console.log(cmd);
-        try {
-            execSync(cmd);
-        } catch (e) {
-            hasErrors = true;
-            console.log(e.output.toString());
-        }
-    }
-
-    if (hasErrors) {
-        console.error('Errors found when building ' + target.name);
-        process.exit(1);
-    }
-
-    var artifactName = tool.artifactName(build, target);
-
-    var apt = arch + '_' + plat + '_' + build.toolchain;
-    // get the library paths and libraries from dependencies
-    var libraryPathDeps = uniqueArray(packages.map(pack => pack[apt])), 
-        libraryDeps = packages.map(pack => pack.build.package.name);
-
-    // get all libraries from dependencies for the target
+    var promisses = [true];
     packages.forEach(pack => {
-        var target = findTarget(pack.build, arch, plat, toolchain);
-        libraryDeps = libraryDeps.concat(target.libraries);
+        promisses = promisses.concat(pack.promisses);
     });
 
-    if (utils.isOutdated(destFiles.map(s => s + '.' + tool.OBJECT_EXTENSION), destFolder + 'bin/' + artifactName)) {
-        var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths.concat(libraryPathDeps), 
-                uniqueArray(target.libraries.concat(libraryDeps)), target.linkoptions)
-        console.log(cmd);
-        try {
-            execSync(cmd);
-        } catch (e) {
-            console.log(e.output.toString());
+    Promise.all(promisses)
+            .then(a => {
+        destFolder = './build/' + target.name + '/';
+        for (var i = 0; i < sourceFiles.length; i++) {
+            if (!utils.isOutdated(sourceFiles[i], destFiles[i] + '.' + tool.OBJECT_EXTENSION))
+                continue;
+            var cmd = tool.compile(sourceFiles[i], destFiles[i], build.includeDirs.concat(target.includeDirs).concat(includeDeps), target.defines, target.options);
+            console.log(cmd);
+            try {
+                execSync(cmd);
+            } catch (e) {
+                hasErrors = true;
+                console.log(e.output.toString());
+            }
         }
-    }
+
+        if (hasErrors) {
+            console.error('Errors found when building ' + target.name);
+            process.exit(1);
+        }
+
+        var artifactName = tool.artifactName(build, target);
+
+        var apt = arch + '_' + plat + '_' + target.toolchain;
+        // get the library paths and libraries from dependencies
+        var libraryPathDeps = uniqueArray(packages.map(pack => pack[apt])), 
+            libraryDeps = packages.map(pack => pack.build.package.name);
+
+        // get all libraries from dependencies for the target
+        packages.forEach(pack => {
+            var target2 = findTarget(pack.build, arch, plat, target.toolchain);
+            libraryDeps = libraryDeps.concat(target2.libraries);
+        });
+
+        if (utils.isOutdated(destFiles.map(s => s + '.' + tool.OBJECT_EXTENSION), destFolder + 'bin/' + artifactName)) {
+            var cmd = tool.link(build.type, destFiles, destFolder + 'bin/' + artifactName, target.libraryPaths.concat(libraryPathDeps), 
+                    uniqueArray(libraryDeps.concat(target.libraries)), target.linkoptions)
+            console.log(cmd);
+            try {
+                execSync(cmd);
+            } catch (e) {
+                console.log(e.output.toString());
+            }
+        }
+    }).catch(err => console.error(err));
 } // end of build command
 
 if (commands.package) {
@@ -306,10 +314,12 @@ if (commands.package) {
 }
 
 if (commands.install) {
+    const install = require('./install.js');
 
     install.installPackage(build);
 
 }
 
+process.nextTick(() => console.log('Build ended.'));
 
 //end of file
