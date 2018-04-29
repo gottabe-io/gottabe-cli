@@ -51,15 +51,14 @@ module.exports.compile = function(srcFile, destFile, includeDirs, defines, optio
 
 module.exports.link = function(type, sources, destFile, libraryPaths, libraries, options) {
     if (type == 'static library')
-        return 'lib /NOLOGO /OUT:"' + destFile + '"' +
+        return 'lib /NOLOGO "/OUT:' + destFile + '"' +
             (options ? linkerOptions(options) : '') +
-            ' ' + sources.map(s => '"' + s.replace(/\//g, '\\') + '.obj"').join(' ');
+            ' ' + sources.map(s => s.replace(/\//g, '\\') + '.obj').join(' ');
     return 'link /nologo' + (type == 'shared library' ? ' /DLL' : '') +
         (libraries.length > 0 ? ' ' + libraries.map(s => s + '.lib').join(' ') : '') +
-        (libraryPaths.length > 0 ? ' /LIBPATH:"' + libraryPaths.map(inc => inc.replace(/\//g, '\\')).join('" /LIBPATH:"') + '"' : '') +
+        (libraryPaths.length > 0 ? ' /LIBPATH:' + libraryPaths.map(inc => inc.replace(/\//g, '\\')).join(' /LIBPATH:') : '') +
         (options ? linkerOptions(options) : '') +
-        ' /OUT:"' + destFile.replace(/\//g, '\\') + '"' +
-//        ' /PDBALTPATH:"' + destFile.replace(/\//g, '\\').replace(/\\[^\\]+\.[a-z0-9~_-]+$/i, '') + 
+        ' "/OUT:' + destFile.replace(/\//g, '\\') +
         '" ' + sources.map(s => '"' + s.replace(/\//g, '\\') + '.obj"').join(' ');
 };
 

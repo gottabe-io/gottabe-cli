@@ -31,7 +31,7 @@
             name: 'Release',
             arch: 'x64',
             platform: 'win32',
-            toolchain: 'mingw',
+            toolchain: 'gcc',
             includeDirs: [],
             sources: [],
             options: {optimization : 3, debug : 0, warnings : 'all', other :''},
