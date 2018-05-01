@@ -53,10 +53,10 @@ module.exports.link = function(type, sources, destFile, libraryPaths, libraries,
     if (type == 'static library')
         return 'lib /NOLOGO "/OUT:' + destFile + '"' +
             (options ? linkerOptions(options) : '') +
-            ' ' + sources.map(s => s.replace(/\//g, '\\') + '.obj').join(' ');
+            ' ' + sources.map(s => '"' + s.replace(/\//g, '\\') + '.obj"').join(' ');
     return 'link /nologo' + (type == 'shared library' ? ' /DLL' : '') +
         (libraries.length > 0 ? ' ' + libraries.map(s => s + '.lib').join(' ') : '') +
-        (libraryPaths.length > 0 ? ' /LIBPATH:' + libraryPaths.map(inc => inc.replace(/\//g, '\\')).join(' /LIBPATH:') : '') +
+        (libraryPaths.length > 0 ? ' "/LIBPATH:' + libraryPaths.map(inc => inc.replace(/\//g, '\\')).join('" "/LIBPATH:') + '"' : '') +
         (options ? linkerOptions(options) : '') +
         ' "/OUT:' + destFile.replace(/\//g, '\\') +
         '" ' + sources.map(s => '"' + s.replace(/\//g, '\\') + '.obj"').join(' ');

@@ -131,7 +131,7 @@ This configuration is a simple json file with relaxed syntax and it must follow 
     version: '1.0',                             // the version number
     type : 'shared library',                    // the type of artifact generated it can be 'shared library', 'static library' ou 'executable'
     dependencies : [                            // a list of packages used to build
-        'AnyLib/1.0.0 => http://anysite.com/anylib' // the name of the package followed by its version the mask '=>' and the site are not required, but necessary if you want GottaBe to get them from the web.
+        'AnyLib/1.0.0'                          // the name of the package followed by its version.
     ],
     includeDirs : [],                           // extra include directories
     sources:['./src/samples.cpp'],              // source files ou directories
@@ -187,6 +187,7 @@ This configuration is a simple json file with relaxed syntax and it must follow 
         name : 'dllsample',                     // name of the artifact
         includes :['./src/dllsample.h'],        // headers and directories to be packaged as include
         other:[]                                // other files
-    }
+    },
+    servers : ['https://anyserver.com']         // the address of a server for searching the packages
 }
 ```

@@ -16,6 +16,7 @@
     along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
 const VERSION = '0.0.1-dev';
+const defaultServers = [];
 
 var arch = process.arch,
     plat = process.platform,
@@ -104,7 +105,7 @@ var defaultBuild = {
     targets: [],
     package: {},
     outputDir: '',
-    repositories: []
+    servers: []
 };
 
 var defaultTarget = {
@@ -213,7 +214,7 @@ if (commands.build) {
 
     var packages = [];
     build.dependencies.forEach(dep => {
-        packages.push(install.getPackage(dep, arch, plat, target.toolchain, packages));
+        packages.push(install.getPackage(dep, arch, plat, target.toolchain, packages, build.servers.concat(config.servers).concat(defaultServers)));
     });
     var includeDeps = uniqueArray(packages.map(pack => pack.includeDir));
 

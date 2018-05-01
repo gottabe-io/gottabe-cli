@@ -20,16 +20,6 @@ const zip_utils = require('./zip_utils');
 const packs = require('./packages');
 
 /**
- * Download the whole structure of files
- * @param {*} request 
- * @param {*} packageInfo 
- * @param {*} destFolder 
- */
-function downloadPackageFiles(request, packageInfo, destFolder) {
-    var build = JSON.parse(fs.readFileSync( destFolder + '/build.json'));
-}
-
-/**
  * Loads the package files into the build directory.
  * @param {*} packageInfo 
  * @param {*} arch 
@@ -74,7 +64,7 @@ function loadPackage(packageInfo, arch, platform, toolchain, packages) {
  * Try downloading a package
  * @param {*} packageInfo 
  */
-function tryDownloadPackage(packageInfo, arch, platform, toolchain, packages) {
+function tryDownloadPackage(packageInfo, arch, platform, toolchain, packages, servers) {
     if (packages.filter(pack => pack.name == packageInfo.name && pack.version == packageInfo.version).length == 0)
         return packages;
     // When server is implemented it must be changed to download from it
@@ -85,10 +75,9 @@ function tryDownloadPackage(packageInfo, arch, platform, toolchain, packages) {
         fs.mkdirSync(packs.gottabe_packages + '/' + packageInfo.name + '/' + packageInfo.version);
 
     // get the json
-    const request = require('request');
-    if (packageInfo.remote) {
-        request(packageInfo.remote, { json: true }, fs.createWriteStream(packs.gottabe_packages + '/' + packageInfo.name + '/' + packageInfo.version + '/build.json', body));   
-        downloadPackageFiles(request, packageInfo, packs.gottabe_packages + '/' + packageInfo.name + '/' + packageInfo.version);
+    const client = require('./client');
+    if (servers && servers.length) {
+        client.downloadFromServers(packageInfo, servers);
     }
     return packages;
 }
@@ -99,15 +88,16 @@ function tryDownloadPackage(packageInfo, arch, platform, toolchain, packages) {
  * @param {String} arch 
  * @param {String} platform 
  * @param {String} toolchain 
+ * @param {String[]} servers 
  */
-function getPackage(packName, arch, platform, toolchain, packages) {
+function getPackage(packName, arch, platform, toolchain, packages, servers) {
     packages = packages || [];
-    var pdata = /^([a-z0-9_.-]+)\/([a-z0-9_.-]+)\s*(=>)?\s*(.*?)$/i.exec(packName);
+    var pdata = /^([a-z0-9_.-]+)\/([a-z0-9_.-]+)$/i.exec(packName);
     if (!pdata)
         throw new Error('');
-    var packageInfo = {name : pdata[1], version : pdata[2], remote : pdata[4]};
+    var packageInfo = {name : pdata[1], version : pdata[2]};
     if (!fs.existsSync(packs.getPackageDir(packageInfo.name, packageInfo.version)))
-        packages = packages.concat(tryDownloadPackage(packageInfo, arch, platform, toolchain, packages));
+        packages = packages.concat(tryDownloadPackage(packageInfo, arch, platform, toolchain, packages, servers));
     loadPackage(packageInfo, arch, platform, toolchain, packages);
     return packageInfo;
 };
