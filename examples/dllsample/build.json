@@ -4,21 +4,19 @@
     author: 'Alan N. Lohse',
     source: 'https://github.com/alanlohse/gottabe/examples/dllsample',
     version: '1.0',
-    type : 'shared library',
-    dependencies : [
-    ],
-    includeDirs : [],
-    sources:['./src/*.cpp'],
-    testSources:['test_src/*.cpp'],
-    targets : [
-        {
-            name:'Debug',
+    type: 'shared library',
+    dependencies: [],
+    includeDirs: [],
+    sources: ['./src/*.cpp'],
+    testSources: ['./test_src/*.cpp'],
+    targets: [{
+            name: 'Debug',
             arch: 'x64',
             platform: 'win32',
             toolchain: 'msvc14',
             includeDirs: [],
             sources: [],
-            options: {optimization : 0, debug : 3, warnings : 'all', other :''},
+            options: { optimization: 0, debug: 3, warnings: 'all', other: '' },
             defines: {
                 'DEBUG': '',
                 'BUILDING_EXAMPLE_DLL': ''
@@ -34,13 +32,13 @@
             toolchain: 'gcc',
             includeDirs: [],
             sources: [],
-            options: {optimization : 3, debug : 0, warnings : 'all', other :''},
+            options: { optimization: 3, debug: 0, warnings: 'all', other: '' },
             defines: {
                 'BUILDING_EXAMPLE_DLL': ''
             },
             libraryPaths: [],
             libraries: [],
-            linkoptions: {debugInformation : false}
+            linkoptions: { debugInformation: false }
         }
     ],
     package: {
