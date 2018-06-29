@@ -8,6 +8,15 @@ function uniqueArray(array) {
     return Array.from(new Set(array));
 }
 
+function findTarget(build, arch, plat, toolchain) {
+    var targs = build.targets.filter(conf =>
+        conf.arch == arch && conf.platform == plat && conf.toolchain == toolchain
+    );
+    if (targs.length > 0)
+        return targs[0];
+    throw new Error('No target found for the dependency');
+}
+
 function build_target(target, arch, plat, build, config, success, nobin) {
 
     const tool = require('./' + target.toolchain + '.js');
@@ -44,7 +53,7 @@ function build_target(target, arch, plat, build, config, success, nobin) {
 
     var packages = [];
     build.dependencies.forEach(dep => {
-        packages.push(install.getPackage(dep, arch, plat, target.toolchain, packages, build.servers.concat(config.servers).concat(defaultServers)));
+        packages.push(install.getPackage(dep, arch, plat, target.toolchain, packages, build.servers.concat(config.servers)));
     });
     var includeDeps = uniqueArray(packages.map(pack => pack.includeDir));
 

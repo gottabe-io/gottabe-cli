@@ -146,15 +146,6 @@ function determinetarget() {
     }
 }
 
-function findTarget(build, arch, plat, toolchain) {
-    var targs = build.targets.filter(conf =>
-        conf.arch == arch && conf.platform == plat && conf.toolchain == toolchain
-    );
-    if (targs.length > 0)
-        return targs[0];
-    throw new Error('No target found for the dependency');
-}
-
 determinetarget();
 
 commands.package |= commands.install;
@@ -178,7 +169,7 @@ if (commands.build) {
 
     const buildjs = require('./build');
 
-    buildjs(target, arch, plat, build, {}, function() {
+    buildjs(target, arch, plat, build, {servers:[]}, function() {
         if (commands.test) {
 
             if (build.testSources && build.testSources.length > 0) {
@@ -195,7 +186,7 @@ if (commands.build) {
 
                 var tests_failed = false;
 
-                buildjs(target, arch, plat, test_build, {}, function(cmdTest) {
+                buildjs(target, arch, plat, test_build, {servers:[]}, function(cmdTest) {
                     try {
                         execSync(path.normalize(cmdTest));
                     } catch (e) {
