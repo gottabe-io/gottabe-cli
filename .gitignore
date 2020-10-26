@@ -61,3 +61,4 @@ typings/
 /.vscode
 /examples/dllsample/build
 /examples/helloworld/build
+/examples/dllsample/*.pdb
