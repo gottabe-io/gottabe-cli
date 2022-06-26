@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /* Copyright (C) 2018 Alan N. Lohse
 
    This file is part of GottaBe.
@@ -15,6 +13,15 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
+	along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
-require('../dist/gottabe.js');
+export { VERSION } from './constants';
+export const defaultServers = [];
+
+export * from 'gottabe-plugin-dev';
+
+import { PhaseParams } from 'gottabe-plugin-dev';
+
+export interface BuildPhase {
+	build(phaseParams: PhaseParams): Promise<void>;
+}

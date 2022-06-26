@@ -1,49 +1,49 @@
 {
-    name: 'DllSample',
-    description: 'A simple example of dll',
-    author: 'Alan N. Lohse',
-    source: 'https://github.com/alanlohse/gottabe/examples/dllsample',
-    version: '1.0',
-    type: 'shared library',
-    dependencies: [],
-    includeDirs: [],
-    sources: ['./src/*.cpp'],
-    testSources: ['./test_src/*.cpp'],
-    targets: [{
-            name: 'Debug',
-            arch: 'x64',
-            platform: 'win32',
-            toolchain: 'msvc14',
-            includeDirs: [],
-            sources: [],
-            options: { optimization: 0, debug: 3, warnings: 'all', other: '' },
-            defines: {
-                'DEBUG': '',
-                'BUILDING_EXAMPLE_DLL': ''
+    "name": "DllSample",
+    "description": "A simple example of dll",
+    "author": "Alan N. Lohse",
+    "source": "https://github.com/alanlohse/gottabe/examples/dllsample",
+    "version": "1.0",
+    "type": "shared library",
+    "dependencies": [],
+    "includeDirs": [],
+    "sources": ["./src/*.cpp"],
+    "testSources": ["./test_src/*.cpp"],
+    "targets": [{
+            "name": "Debug",
+            "arch": "x64",
+            "platform": "win32",
+            "toolchain": "msvc14",
+            "includeDirs": [],
+            "sources": [],
+            "options": { "optimization": 0, "debug": 3, "warnings": "all", "other": "" },
+            "defines": {
+                "DEBUG": "",
+                "BUILDING_EXAMPLE_DLL": ""
             },
-            libraryPaths: [],
-            libraries: [],
-            linkoptions: {}
+            "libraryPaths": [],
+            "libraries": [],
+            "linkoptions": {}
         },
         {
-            name: 'Release',
-            arch: 'x64',
-            platform: 'win32',
-            toolchain: 'gcc',
-            includeDirs: [],
-            sources: [],
-            options: { optimization: 3, debug: 0, warnings: 'all', other: '' },
-            defines: {
-                'BUILDING_EXAMPLE_DLL': ''
+            "name": "Release",
+            "arch": "x64",
+            "platform": "win32",
+            "toolchain": "gcc",
+            "includeDirs": [],
+            "sources": [],
+            "options": { "optimization": 3, "debug": 0, "warnings": "all", "other": "" },
+            "defines": {
+                "BUILDING_EXAMPLE_DLL": ""
             },
-            libraryPaths: [],
-            libraries: [],
-            linkoptions: { debugInformation: false }
+            "libraryPaths": [],
+            "libraries": [],
+            "linkoptions": { "debugInformation": false }
         }
     ],
-    package: {
-        name: 'dllsample',
-        includes: ['./src/*.h'],
-        other: []
+    "package": {
+        "name": "dllsample",
+        "includes": ["./src/*.h"],
+        "other": []
     }
 }

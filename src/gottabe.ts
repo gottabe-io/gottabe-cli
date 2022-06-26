@@ -15,96 +15,41 @@
     You should have received a copy of the GNU General Public License
     along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
-const VERSION = '0.0.1-dev';
-const defaultServers = [];
+import {BuildConfig, Phase, TargetConfig, VERSION} from './base_types';
+import {getCommandLine} from './command_line';
+import fs from 'fs';
+import utils from './utils';
+import {doTheBuild} from './main_flow';
+import {initConfig} from "./config";
 
-var arch = process.arch,
-    plat = process.platform,
-    build, target, targetName,
-    commands = { clean: false, build: false, package: false, install: false, test: false };
+let build : BuildConfig, target : TargetConfig | undefined;
 
-const program = require('commander');
+const commands = getCommandLine();
 
-program
-    .command('clean')
-    .description('Clean the files generated in a build.')
-    .action(function() {
-        commands.clean = true;
-    });
-program
-    .command('build')
-    .description('Build the project.')
-    .action(function() {
-        commands.build = true;
-    });
-program
-    .command('package')
-    .description('Package a project previously built.')
-    .action(function() {
-        commands.package = true;
-    });
-program
-    .command('install')
-    .description('Install a project previously packaged.')
-    .action(function() {
-        commands.install = true;
-    });
-program
-    .command('test')
-    .description('Test a project.')
-    .action(function() {
-        commands.test = true;
-    });
-program
-    .version(VERSION, '-v, --version')
-    .option('-T, --target <targetName>', 'Choose a target.')
-    .option('-nt, --no-tests', 'No tests will be called after building.')
-    .option('--arch <arch>', 'Override the default architecture.')
-    .option('--platform <platform>', 'Override the default platform.');
+initConfig(commands.settingsFile);
 
-program.parse(process.argv);
+const BUILD_FILES = ['./build.yml', './build.yaml', './build.json'];
 
-if (!(commands.clean || commands.build || commands.package || commands.install || commands.test)) {
-    program.help();
-}
+const findBuildFile = () : (string | undefined) => {
+	return BUILD_FILES.filter(fs.existsSync)[0];
+};
 
-const fs = require('fs');
-const utils = require('./utils.js');
-const rjson = require("relaxed-json");
-const path = require('path');
+const BUILD_FILE = findBuildFile();
 
-const BUILD_FILE = './build.json';
-
-arch = program.arch || arch;
-
-plat = program.platform || plat;
-
-if (!fs.existsSync(BUILD_FILE)) {
-    console.error('No ' + BUILD_FILE.substring(2) + ' found in the current directory.');
+if (!(BUILD_FILE)) {
+    console.error('No build configuration found in the current directory.');
     process.exit(1);
 }
 
-var data = fs.readFileSync(BUILD_FILE);
-data = rjson.transform(data.toString());
-build = JSON.parse(data);
+build = utils.parseBuild(BUILD_FILE);
+try {
+	utils.validateBuild(build);
+} catch(e:any) {
+    console.error(e.message);
+    process.exit(1);
+}
 
-var defaultBuild = {
-    name: '',
-    description: '',
-    author: '',
-    version: '0.0.1',
-    type: 'executable', // shared library, static library or executable 
-    dependencies: [],
-    includeDirs: [],
-    sources: [],
-    testSources: [],
-    targets: [],
-    package: {},
-    outputDir: '',
-    servers: []
-};
-
-var defaultTarget = {
+const defaultTarget: TargetConfig = {
     name: '',
     arch: '',
     platform: '',
@@ -115,24 +60,38 @@ var defaultTarget = {
     defines: {},
     libraryPaths: [],
     libraries: [],
-    linkoptions: { debugInformation: true }
+    linkOptions: { debugInformation: true }
+};
+
+const defaultBuild: BuildConfig = {
+    groupId: '',
+    artifactId: '',
+    version: '',
+    type: 'executable',
+    description: '',
+    author: '',
+    source: '',
+    sources: [],
+    targets: [defaultTarget],
+    package: {},
+    servers: []
 };
 
 build = Object.assign(defaultBuild, build);
 
 console.log('GottaBe v%s is now building your project!', VERSION);
 
-function determinetarget() {
-    var targetName = program.target;
+function determineTarget() {
+    let targetName = commands.target;
     if (!targetName)
-        console.log('Trying to find a target for arch: ' + arch + ' and platform ' + plat);
-    build.targets.every(function(conf) {
+        console.log('Trying to find a target for arch: ' + commands.arch + ' and platform ' + commands.platform);
+    build.targets?.every(function(conf : any) {
         if (targetName) {
             if (targetName == conf.name) {
                 target = Object.assign(defaultTarget, conf);
                 return false;
             }
-        } else if (conf.arch == arch && conf.platform == plat) {
+        } else if (conf.arch == commands.arch && conf.platform == commands.platform) {
             target = Object.assign(defaultTarget, conf);
             return false;
         }
@@ -146,119 +105,44 @@ function determinetarget() {
     }
 }
 
-determinetarget();
+determineTarget();
 
-commands.package |= commands.install;
-commands.test |= commands.package && !program.noTests;
-commands.build |= commands.package || commands.test;
+commands.package = commands.package || commands.install || commands.publish;
+commands.test = (commands.test || commands.package) && !commands.noTests;
+commands.build = commands.build || commands.package || commands.test;
+
+let phases : Phase[] = [];
 
 if (commands.clean) {
-
-    const { execSync } = require('child_process');
-
-    if (fs.existsSync('./build')) {
-        if (plat == 'win32')
-            execSync('rmdir /S /Q .\\build');
-        else
-            execSync('rm -f ./build');
-    }
-
+	phases.push(Phase.CLEAN);
 }
-
 if (commands.build) {
-
-    const buildjs = require('./build');
-
-    buildjs(target, arch, plat, build, {servers:[]}, function() {
-        if (commands.test) {
-
-            if (build.testSources && build.testSources.length > 0) {
-
-                const { execSync } = require('child_process');
-
-                var test_build = Object.assign(build, {
-                    type: 'executable',
-                    sources: build.testSources.concat(build.sources),
-                    package: {
-                        name: build.package.name + '_test'
-                    }
-                });
-
-                var tests_failed = false;
-
-                buildjs(target, arch, plat, test_build, {servers:[]}, function(cmdTest) {
-                    try {
-                        execSync(path.normalize(cmdTest));
-                    } catch (e) {
-                        if (e.status != 0) {
-                            tests_failed = true;
-                            console.log('Tests failed: ' + e.message);
-                        }
-                    }
-                }, true);
-
-                if (tests_failed) {
-                    process.exit(1);
-                }
-                console.log('Tests finished with success.');
-            } else {
-                console.log('No tests to build.');
-            }
-        }
-    });
-
-} // end of build command
-
+	phases.push(Phase.RESOLVE_DEPENDENCIES);
+    phases.push(Phase.PRECOMPILE);
+	phases.push(Phase.COMPILE);
+    phases.push(Phase.PRELINK);
+	phases.push(Phase.LINK);
+}
+if (commands.test) {
+	phases.push(Phase.TEST);
+}
 if (commands.package) {
-
-    var destFolder = './build/';
-    var targetFolder = './build/' + target.name + '/';
-
-    if (!fs.existsSync(destFolder + 'package')) {
-        fs.mkdirSync(destFolder + 'package');
-    }
-    var destBinFolder = destFolder + 'package/' + target.arch + '_' + target.platform + '_' + target.toolchain;
-    if (!fs.existsSync(destBinFolder)) {
-        fs.mkdirSync(destBinFolder);
-    }
-    var indludes = build.package.includes || [];
-    if (indludes.length > 0 && !fs.existsSync(destFolder + 'package/include')) {
-        fs.mkdirSync(destFolder + 'package/include');
-    }
-    var tool = require('./' + target.toolchain + '.js');
-    var artifactName = tool.artifactName(build, target);
-
-    var fsx = require('fs-extra');
-    // copy includes
-    indludes.forEach(inc => {
-        console.log('Copying ' + inc + ' to package');
-        if (utils.isDir(inc)) {
-            fsx.copySync(inc, destFolder + 'package/include');
-        } else {
-            var files = [];
-            utils.getFiles(inc, files);
-            console.log(files);
-            files.forEach(src => {
-                var idxBar = src.replace(/\//g, '/').lastIndexOf('/');
-                var dest = destFolder + 'package/include/' +
-                    (idxBar != -1 ? src.substring(idxBar + 1) : src);
-                console.log(src + ' => ' + dest);
-                fsx.copySync(src, dest);
-            });
-        }
-    });
-
-    console.log('Copying binaries to package');
-    fsx.copySync(targetFolder + 'bin', destBinFolder);
-
+	phases.push(Phase.PREPACKAGE);
+    phases.push(Phase.PACKAGE);
 }
-
 if (commands.install) {
-    const install = require('./install.js');
-
-    install.installPackage(build);
-
+    phases.push(Phase.PREINSTALL);
+	phases.push(Phase.INSTALL);
 }
+if (commands.publish) {
+    phases.push(Phase.PREPUBLISH);
+    phases.push(Phase.PUBLISH);
+}
+phases.push(Phase.FINISH);
+
+if (target)
+    doTheBuild(commands, phases, build, target)
+        .catch((e) => console.error(e));
 
 process.nextTick(() => console.log('Build ended.'));
 

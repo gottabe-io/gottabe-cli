@@ -15,17 +15,17 @@
     You should have received a copy of the GNU General Public License
     along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
-const fs = require('fs');
-const archiver = require('archiver');
-const unzip = require('unzipper');
+import fs from 'fs';
+import archiver from 'archiver';
+import unzip from 'unzipper';
 
-module.exports.zipfolder = function(source, dest) {
+const zipFolder = function(source:string, dest:string): Promise<any> {
     // create a file to stream archive data to.
-    var output = fs.createWriteStream(dest);
-    var archive = archiver('zip', {
+    let output = fs.createWriteStream(dest);
+    let archive = archiver('zip', {
         zlib: { level: 9 } // Sets the compression level.
     });
-    var promise = new Promise((resolve, reject) => {
+    let promise = new Promise((resolve, reject) => {
         output.on('close', function() {
             resolve(dest);
         });
@@ -42,12 +42,12 @@ module.exports.zipfolder = function(source, dest) {
     // pipe archive data to the file
     archive.pipe(output);
     archive.directory(source, false);
-    archive.finalize();
-    return promise;
+    let finalize = archive.finalize();
+    return Promise.all([promise, finalize]);
 };
 
-module.exports.unzipfolder = function(src, dest) {
-    var output = fs.createReadStream(src)
+const unzipFolder = function(src: string, dest: string): Promise<any> {
+    let output = fs.createReadStream(src)
         .pipe(unzip.Extract({ path: dest }));
     return new Promise((resolve, reject) => {
             output.on('close', function() {
@@ -56,5 +56,7 @@ module.exports.unzipfolder = function(src, dest) {
             output.on('error', function(err) {
                 reject(err);
             });
-        });        
+        });
 };
+
+export default {zipFolder, unzipFolder};

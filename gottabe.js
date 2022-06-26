@@ -15,4 +15,4 @@
     You should have received a copy of the GNU General Public License
     along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
-module.exports.cli = require('./src/gottabe');
+module.exports.cli = require('./dist/gottabe');

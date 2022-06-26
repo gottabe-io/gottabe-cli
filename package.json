@@ -1,17 +1,19 @@
 {
   "name": "gottabe",
-  "version": "0.0.1-dev",
+  "version": "0.1.0-dev",
   "preferGlobal": true,
   "description": "Very easy tool for building and packaging c++ libraries and executables",
   "main": "gottabe",
   "engines": {
-    "node": ">=4.0.0"
+    "node": ">=16.0.0",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
     "gottabe": "./bin/gottabe"
   },
-  "scripts": {},
+  "scripts": {
+    "build": "tsc"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/alanlohse/gottabe"
@@ -30,21 +32,29 @@
     "dependency-manager"
   ],
   "dependencies": {
-    "@types/node": "^14.0.10",
     "archiver": "^2.1.1",
-    "commander": "^5.1.0",
+    "commander": "^9.2.0",
     "es6-set": "^0.1.5",
     "fs-extra": "^5.0.0",
+    "gottabe-client": "file:../gottabe-client",
+    "gottabe-plugin-dev": "file:../gottabe-plugin-dev",
     "handlebars": "^4.7.6",
+    "igottp": "file:../../igottp",
     "log4js": "^6.3.0",
-    "ts-node": "^7.0.1",
     "relaxed-json": "^1.0.1",
-    "request": "^2.81.0",
     "unzipper": "^0.8.13",
-    "typescript": "^3.0.3",
-    "yaml": "^1.10.0"
+    "yaml": "^1.10.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/archiver": "^5.1.1",
+    "@types/fs-extra": "^9.0.12",
+    "@types/glob": "^7.1.4",
+    "@types/node": "^14.17.9",
+    "@types/relaxed-json": "^1.0.1",
+    "@types/unzipper": "^0.10.4",
+    "ts-node": "^7.0.1",
+    "tslib": "^2.3.0"
+  },
   "author": "Alan N. Lohse",
   "license": "GPL-3.0"
 }

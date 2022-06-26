@@ -62,3 +62,5 @@ typings/
 /examples/dllsample/build
 /examples/helloworld/build
 /examples/dllsample/*.pdb
+.idea
+dist
