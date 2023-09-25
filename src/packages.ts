@@ -18,7 +18,7 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
-import {BuildConfig, PackageInfo} from './base_types';
+import {BuildDescriptor, PackageInfo} from './base_types';
 import {getConfig} from "./config";
 
 const config = getConfig();
@@ -64,13 +64,13 @@ function createPackageDir(packageName:string, ...subs:string[]) {
     return setupDir(config.getPackagesPath() + '/' + packageName, ...subs);
 }
 
-function buildToPackage(bc: BuildConfig): PackageInfo {
+function buildToPackage(bc: BuildDescriptor): PackageInfo {
 	return {groupId: bc.groupId, artifactId: bc.artifactId, version: bc.version, checksum:'', dependencies: [], scope: ['compile'], dirs: {}};
 }
 
 function parse(str: string): PackageInfo {
 	let parts = /^([a-z][a-z0-9_.-]+)\/([a-z][a-z0-9_-]+)@([0-9a-z_.*-]+)([:]([a-z, ]+))?$/i.exec(str);
-	if (!parts || parts.length < 3) throw new Error("Invalid package description");
+	if (!parts || parts.length < 3) throw new Error("Invalid package description: \""+ str +"\"");
 	return {groupId: parts[1], artifactId: parts[2], version: parts[3], checksum:'', dependencies: [], scope: (parts[5] || 'compile').split(/[ ,]+/), dirs: {}};
 }
 

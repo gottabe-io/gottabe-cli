@@ -20,8 +20,14 @@ export const defaultServers = [];
 
 export * from 'gottabe-plugin-dev';
 
-import { PhaseParams } from 'gottabe-plugin-dev';
+import { PhaseParams, CommandLineOptions } from 'gottabe-plugin-dev';
 
 export interface BuildPhase {
 	build(phaseParams: PhaseParams): Promise<void>;
+}
+
+export interface CommandLineOptionsEx extends CommandLineOptions {
+	nonBuildCommand?: string;
+	commandArgs?: any[];
+	plugin?: boolean;
 }

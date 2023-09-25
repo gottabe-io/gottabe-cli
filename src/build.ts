@@ -31,9 +31,33 @@ export class PreCompilePhase implements BuildPhase {
 
         sources.forEach(path => utils.getFiles(path, sourceFiles));
 
-        let destFolder = './build/' + target.name + '/';
+        let destFolder = './build/' + target.name + '/bin/';
 
         packs.setupDir('./build', target.name, 'bin');
+
+        phaseParams.inputFiles = sourceFiles;
+
+        phaseParams.destDir = destFolder;
+
+    }
+
+}
+
+export class PostCompilePhase implements BuildPhase {
+
+    async build(phaseParams: PhaseParams) {
+        let build = phaseParams.buildConfig;
+        let target = phaseParams.currentTarget;
+
+        let sources = build.testSources || [];
+
+        let sourceFiles: string[] = [];
+
+        sources.forEach(path => utils.getFiles(path, sourceFiles));
+
+        let destFolder = './build/' + target.name + '/test_bin/';
+
+        packs.setupDir('./build', target.name, 'test_bin');
 
         phaseParams.inputFiles = sourceFiles;
 
@@ -50,13 +74,33 @@ export class PreLinkPhase implements BuildPhase {
 
         let sourceFiles: string[] = [];
 
-        let objDir = './build/' + target.name;
+        let objDir = './build/' + target.name + "/bin";
 
         utils.getFiles(objDir + '/*.o*', sourceFiles);
 
         phaseParams.inputFiles = sourceFiles;
 
         phaseParams.destDir = objDir + '/bin';
+
+    }
+}
+
+export class PostLinkPhase implements BuildPhase {
+
+    async build(phaseParams: PhaseParams) {
+        let target = phaseParams.currentTarget;
+
+        let sourceFiles: string[] = [];
+
+        let objDir = './build/' + target.name + "/bin";
+        let testObjDir = './build/' + target.name + "/test_bin";
+
+        utils.getFiles(objDir + '/*.o*', sourceFiles);
+        utils.getFiles(testObjDir + '/*.o*', sourceFiles);
+
+        phaseParams.inputFiles = sourceFiles;
+
+        phaseParams.destDir = testObjDir;
 
     }
 }

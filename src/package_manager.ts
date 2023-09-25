@@ -18,7 +18,7 @@
 import fs from 'fs';
 import zip_utils from './zip_utils';
 import packs from './packages';
-import {BuildConfig, BuildPhase, PackageInfo, PhaseParams} from './base_types';
+import {BuildDescriptor, BuildPhase, PackageInfo, PhaseParams} from './base_types';
 import {PackageManager, Project} from './gottabe_api';
 import client from './client';
 import utils from './utils';
@@ -36,7 +36,7 @@ export class PackageManagerImpl implements PackageManager {
 	}
 
 	async loadPackage(packageInfo: PackageInfo, arch: string, platform: string, toolchain: string): Promise<PackageInfo[]> {
-		let descriptor :BuildConfig = JSON.parse(
+		let descriptor :BuildDescriptor = JSON.parse(
 			fs.readFileSync(packs.getPackageDir(packageInfo.groupId, packageInfo.artifactId,packageInfo.version, 'build.json')).toString());
 		if (descriptor.type != 'shared library' && descriptor.type != 'static library')
 			throw new Error('The dependencies must be libraries.');

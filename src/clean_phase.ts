@@ -15,11 +15,11 @@
     You should have received a copy of the GNU General Public License
 	along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
-import {BuildPhase, PhaseParams, Phase, BuildConfig} from "./base_types";
+import {BuildPhase, PhaseParams, Phase, BuildDescriptor} from "./base_types";
 import { execSync } from 'child_process';
 import fs from 'fs';
 
-function cleanWindows(buildConfig: BuildConfig, all?: boolean) {
+function cleanWindows(buildConfig: BuildDescriptor, all?: boolean) {
 	if (all)
 		execSync('rmdir /S /Q .\\build');
 	else {
@@ -29,7 +29,7 @@ function cleanWindows(buildConfig: BuildConfig, all?: boolean) {
 	}
 }
 
-function cleanLinux(buildConfig: BuildConfig, all?: boolean) {
+function cleanLinux(buildConfig: BuildDescriptor, all?: boolean) {
 	if (all)
 		execSync('rm -f ./build');
 	else {

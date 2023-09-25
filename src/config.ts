@@ -1,4 +1,4 @@
-import {DEFAULT_SERVER, GOTTABE_LOCAL_REPO} from "./constants";
+import {DEFAULT_SERVERS, GOTTABE_LOCAL_REPO} from "./constants";
 import utils from './utils';
 
 interface ProxyConfig {
@@ -23,7 +23,7 @@ export interface Config {
 
 let config: Config = {
     localRepository: GOTTABE_LOCAL_REPO,
-    servers: [{url: DEFAULT_SERVER}],
+    servers: DEFAULT_SERVERS.map((s: string) => ({url: s})),
     getPackagesPath: () : string => {
         return config.localRepository + '/packages';
     },
@@ -36,7 +36,7 @@ export const getConfig = () => config;
 
 export const initConfig = (configFile?: string) => {
     configFile = configFile || (GOTTABE_LOCAL_REPO + '/config.yml');
-    let data : any = utils.parseBuild(configFile);
+    let data : any = utils.parseBuild(configFile) || {};
     data = Object.assign({}, data, config);
     config = data;
 };

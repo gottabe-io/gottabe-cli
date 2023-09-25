@@ -16,55 +16,80 @@
     along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
 import {program} from 'commander';
-import {CommandLineOptions, VERSION} from './base_types';
+import {CommandLineOptions, CommandLineOptionsEx, VERSION} from './base_types';
 
 export const getCommandLine = () : CommandLineOptions => {
 
-	let commands : CommandLineOptions = {clean: false, build: false, package: false, install: false, publish: false, test: false, arch: process.arch,
-		platform: process.platform, noTests: false};
+	let commands : CommandLineOptionsEx = {clean: false, build: false, package: false, install: false, publish: false, test: false, arch: process.arch,
+		platform: process.platform, noTests: false, plugin: false};
 
-	program
+	[program
 		.createCommand('clean')
 		.description('Clean the files generated in a build.')
 		.action(function() {
 			commands.clean = true;
-		});
+		}),
 	program
 		.createCommand('build')
 		.description('Build the project.')
 		.action(function() {
 			commands.build = true;
-		});
+		}),
 	program
 		.createCommand('package')
 		.description('Package a project previously built.')
 		.action(function() {
 			commands.package = true;
-		});
+		}),
 	program
 		.createCommand('install')
 		.description('Install a project previously packaged.')
 		.action(function() {
 			commands.install = true;
-		});
+		}),
 	program
 		.createCommand('publishToLocal')
 		.description('Same as install.')
 		.action(function() {
 			commands.install = true;
-		});
+		}),
 	program
 		.createCommand('publish')
 		.description('Publish a project previously packaged.')
 		.action(function() {
 			commands.publish = true;
-		});
+		}),
+	program
+		.createCommand('add')
+		.description('Add a dependency to the project.')
+		.argument('[packageName]','The name of the package to add')
+		.option("--plugin", "Add a plugin to the build", false)
+		.action(function(args) {
+			commands.nonBuildCommand = 'add';
+			commands.commandArgs = args;
+		}),
+	program
+		.createCommand('rem')
+		.description('Remove a dependency from the project.')
+		.argument('[packageName]','The name of the package to add')
+		.action(function(args) {
+			commands.nonBuildCommand = 'rem';
+			commands.commandArgs = args;
+		}),
+	program
+		.createCommand('init')
+		.description('Init a new project.')
+		.action(function() {
+			commands.nonBuildCommand = 'init';
+		}),
 	program
 		.createCommand('test')
 		.description('Test a project.')
 		.action(function() {
 			commands.test = true;
-		});
+		})
+	].forEach((cmd) => program.addCommand(cmd));
+
 	program
 		.version(VERSION.toString(), '-v, --version')
 		.option('-T, --target <targetName>', 'Choose a target')
@@ -79,7 +104,7 @@ export const getCommandLine = () : CommandLineOptions => {
 
 	program.parse(process.argv);
 
-	if (!(commands.clean || commands.build || commands.package || commands.install || commands.test || commands.publish)) {
+	if (!(commands.clean || commands.build || commands.package || commands.install || commands.test || commands.publish || commands.nonBuildCommand)) {
 		program.help();
 	}
 
@@ -89,6 +114,7 @@ export const getCommandLine = () : CommandLineOptions => {
 	commands.all = (<any> program).all;
 	commands.noTests = (<any> program).noTests;
 	commands.settingsFile = (<any> program).settingsFile;
+	commands.plugin = (<any> program).plugin;
 
 	return commands;
 };

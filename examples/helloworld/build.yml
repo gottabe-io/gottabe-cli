@@ -1,0 +1,32 @@
+---
+name: HelloWorld
+description: A simple hello world executable
+author: Simon Randomson
+source: https://github.com/simonrandomson/mylib
+version: '1.0'
+type: executable
+sources:
+  - "./src/*.cpp"
+targets:
+  - name: Debug
+    arch: x64
+    platform: win32
+    toolchain: msvc14
+    options:
+      optimization: 0
+      debug: 3
+      warnings: all
+    defines:
+      DEBUG: ''
+  - name: Release
+    arch: x64
+    platform: win32
+    toolchain: gcc
+    options:
+      optimization: 3
+      debug: 0
+      warnings: all
+    linkoptions:
+      debugInformation: false
+package:
+  name: hello

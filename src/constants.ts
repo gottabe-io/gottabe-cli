@@ -32,6 +32,6 @@ export const VERSION = {
  */
 export const GOTTABE_LOCAL_REPO = os.homedir() + '/.gottabe';
 export const PLUGIN_DIR = './build/plugins';
-export const DEFAULT_SERVER = 'http://localhost:8080';
+export const DEFAULT_SERVERS = ['http://localhost:8080'];
 export const DEFAULT_BUILD_PLUGIN = `io.gottabe/gottabe-plugin-build@${VERSION.major}.${VERSION.minor}.*`;
 export const DEFAULT_TEST_PLUGIN = `io.gottabe/gottabe-plugin-test@${VERSION.major}.${VERSION.minor}.*`;

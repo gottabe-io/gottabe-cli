@@ -24,7 +24,7 @@ export class DependenciesPhase implements BuildPhase {
 
 	async build(phaseParams: PhaseParams) {
 		let build = phaseParams.buildConfig;
-		let servers = build.servers || [];
+		let servers: string[] = [];
 		let target = phaseParams.currentTarget;
 		let pDependencies = (build.dependencies || [])
 				.map(packs.parse)

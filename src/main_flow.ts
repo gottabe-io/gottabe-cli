@@ -16,7 +16,7 @@
 	along with GottaBe.  If not, see <http://www.gnu.org/licenses/> */
 
 import {
-    BuildConfig,
+    BuildDescriptor,
     CommandLineOptions,
     PackageManager,
     Phase,
@@ -28,14 +28,15 @@ import {
     Project,
     TargetConfig
 } from "gottabe-plugin-dev";
-import {DEFAULT_BUILD_PLUGIN, DEFAULT_SERVER, DEFAULT_TEST_PLUGIN} from "./constants";
+import {DEFAULT_BUILD_PLUGIN, DEFAULT_SERVERS, DEFAULT_TEST_PLUGIN} from "./constants";
 import {pluginManager} from "./plugin_manager";
 import {CleanPhase} from "./clean_phase";
 import {DependenciesPhase} from "./dependencies";
-import {PreCompilePhase, PreLinkPhase} from "./build";
+import {PreCompilePhase, PreLinkPhase, PostCompilePhase, PostLinkPhase} from "./build";
 import {packageManager, PackagePhase} from "./package_manager";
-import {BuildPhase} from "./base_types";
+import {BuildPhase, CommandLineOptionsEx} from "./base_types";
 import {InstallPhase} from "./install";
+import utils from "./utils";
 
 /**
  * Check if the plugin has the specific phases for building
@@ -100,10 +101,14 @@ function getPhaseInstance(phase: Phase) {
         case Phase.PRECOMPILE:
             return new PreCompilePhase();
         case Phase.COMPILE:
+            return new PostCompilePhase();
+        case Phase.COMPILE_TESTS:
             return EMPTY_PHASE;
         case Phase.PRELINK:
             return new PreLinkPhase();
         case Phase.LINK:
+            return new PostLinkPhase();
+        case Phase.LINK_TESTS:
             return EMPTY_PHASE;
         case Phase.PREPACKAGE:
             return EMPTY_PHASE;
@@ -132,7 +137,7 @@ function getPhaseInstance(phase: Phase) {
  * @param target
  * @param old
  */
-function createPhase(phase: Phase, commands: CommandLineOptions, project: Project, build: BuildConfig, target: TargetConfig, old: PhaseParams | undefined): PhaseParams {
+function createPhase(phase: Phase, commands: CommandLineOptions, project: Project, build: BuildDescriptor, target: TargetConfig, old: PhaseParams | undefined): PhaseParams {
     return {
         buildConfig: build,
         currentTarget: target,
@@ -184,16 +189,15 @@ async function callPlugins(plugins: { plugin: Plugin; descriptor: PluginConfig }
  * @param build
  * @param target
  */
-export const doTheBuild = async (commands: CommandLineOptions, phases: Phase[], build: BuildConfig, target: TargetConfig) => {
+export const doTheBuild = async (commands: CommandLineOptions, phases: Phase[], build: BuildDescriptor, target: TargetConfig) => {
     let pluginDescs = (build.plugins || []).concat(target.plugins || []);
-    let servers = (build.servers || []).concat([DEFAULT_SERVER]);
 
     let phaseRunners = phases.map(phase => ({phase, instance: getPhaseInstance(phase)}));
-    let plugins = (await loadPlugins(pluginDescs, phases, servers))
+    let plugins = (await loadPlugins(pluginDescs, phases, DEFAULT_SERVERS))
         .map((plg, index) => ({plugin: plg, descriptor: pluginDescs[index]}));
 
     let project: Project = {
-        getBuildConfig: (): BuildConfig => build,
+        getBuildConfig: (): BuildDescriptor => build,
         getGroupId: (): string => build.groupId,
         getArtifactId: (): string => build.artifactId,
         getVersion: (): string => build.version,
@@ -214,3 +218,114 @@ export const doTheBuild = async (commands: CommandLineOptions, phases: Phase[], 
     }
 };
 
+export const build = (buildFile: string, commands: CommandLineOptionsEx) => {
+
+    let build : BuildDescriptor, target : TargetConfig | undefined;
+
+    build = utils.parseBuild(buildFile);
+
+    try {
+        utils.validateBuild(build);
+    } catch (e: any) {
+        console.error(e.message);
+        process.exit(1);
+    }
+
+    const defaultTarget: TargetConfig = {
+        name: '',
+        arch: '',
+        platform: '',
+        toolchain: '',
+        includeDirs: [],
+        sources: [],
+        options: {optimization: 0, debug: 3, warnings: 'all', other: ''},
+        defines: {},
+        libraryPaths: [],
+        libraries: [],
+        linkOptions: {debugInformation: true}
+    };
+
+    const defaultBuild: BuildDescriptor = {
+        groupId: '',
+        artifactId: '',
+        version: '',
+        type: 'executable',
+        description: '',
+        author: '',
+        sourceUrl: '',
+        sources: [],
+        targets: [defaultTarget],
+        package: {}
+    };
+
+    build = Object.assign(defaultBuild, build);
+
+    function determineTarget() {
+        let targetName = commands.target;
+        if (!targetName)
+            console.log('Trying to find a target for arch: ' + commands.arch + ' and platform ' + commands.platform);
+        build.targets?.every(function (conf: any) {
+            if (targetName) {
+                if (targetName == conf.name) {
+                    target = Object.assign(defaultTarget, conf);
+                    return false;
+                }
+            } else if (conf.arch == commands.arch && conf.platform == commands.platform) {
+                target = Object.assign(defaultTarget, conf);
+                return false;
+            }
+            return true;
+        });
+        if (!target) {
+            console.error('Target ' + (targetName ? targetName + ' ' : '') + 'not found.');
+            process.exit(1);
+        } else {
+            console.log('Target found: ' + target.name);
+        }
+    }
+
+    determineTarget();
+
+    commands.package = commands.package || commands.install || commands.publish;
+    commands.test = (commands.test || commands.package) && !commands.noTests;
+    commands.build = commands.build || commands.package || commands.test;
+
+    let phases: Phase[] = [];
+
+    if (commands.clean) {
+        phases.push(Phase.CLEAN);
+    }
+    if (commands.build) {
+        phases.push(Phase.RESOLVE_DEPENDENCIES);
+        phases.push(Phase.PRECOMPILE);
+        phases.push(Phase.COMPILE);
+        if (commands.test)
+            phases.push(Phase.COMPILE_TESTS);
+        phases.push(Phase.PRELINK);
+        phases.push(Phase.LINK);
+        if (commands.test)
+            phases.push(Phase.LINK_TESTS);
+    }
+    if (commands.test) {
+        phases.push(Phase.TEST);
+    }
+    if (commands.package) {
+        phases.push(Phase.PREPACKAGE);
+        phases.push(Phase.PACKAGE);
+    }
+    if (commands.install) {
+        phases.push(Phase.PREINSTALL);
+        phases.push(Phase.INSTALL);
+    }
+    if (commands.publish) {
+        phases.push(Phase.PREPUBLISH);
+        phases.push(Phase.PUBLISH);
+    }
+    phases.push(Phase.FINISH);
+
+    if (target) {
+        doTheBuild(commands, phases, build, target)
+            .then(() => console.log('Build ended.'))
+            .catch((e) => console.error(e));
+    }
+}

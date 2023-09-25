@@ -20,7 +20,7 @@ import packs from './packages';
 import url from 'url';
 import path from 'path';
 import {withAuthClient} from './http-services';
-import {BaseDescriptor, BuildConfig, TargetConfig} from './base_types';
+import {BaseDescriptor, BuildDescriptor, TargetConfig} from './base_types';
 import {ApiPackagesService} from 'gottabe-client';
 import utils from './utils';
 
@@ -40,14 +40,12 @@ const packageService = new ApiPackagesService(withAuthClient);
 const getDescriptor = async(desc: BaseDescriptor, server: string, type: string): Promise<any> => {
 	type = type || 'package';
 	let descFile = type === 'plugin' ? 'plugin' : 'build';
-	return type == 'package'
-		? await packageService.getPackageFile(desc.groupId, desc.artifactId, desc.version, descFile + '.json', {baseUrl:server})
-		: null;
+	return await packageService.getPackageFile(desc.groupId, desc.artifactId, desc.version, descFile + '.json', type,{baseUrl:server});
 };
 
 const download = async (desc: BaseDescriptor, type: string, base: string, file: string): Promise<any> => {
 	let blob: Blob | null = type == 'package'
-		? await packageService.getPackageFile(desc.groupId, desc.artifactId, desc.version, file, {baseUrl:base})
+		? await packageService.getPackageFile(desc.groupId, desc.artifactId, desc.version, file, type,{baseUrl:base})
 		: null;
 	if (blob)
 		await blob.stream()
@@ -75,9 +73,7 @@ const upload = async (descriptor: BaseDescriptor, type: string, server: string, 
 
 	let blob: Blob = await stream2Blob(readStream, 'application/octet-stream');
 
-	return type == 'package'
-	? await packageService.postPackageFile(descriptor.groupId, descriptor.artifactId, descriptor.version, baseFilename, blob, {baseUrl: server})
-	: null;
+	return await packageService.postPackageFile(descriptor.groupId, descriptor.artifactId, descriptor.version, baseFilename, blob, {baseUrl: server});
 
 };
 
@@ -88,7 +84,7 @@ const upload = async (descriptor: BaseDescriptor, type: string, server: string, 
  * @param {*} destFolder
  */
 const downloadPackageFiles = (base:string, desc: BaseDescriptor, destFolder: string): Promise<any[]> => {
-	var build : BuildConfig = utils.parseBuild(destFolder + '/build.json');
+	var build : BuildDescriptor = utils.parseBuild(destFolder + '/build.json');
 	var targets :string[] = Array.from(new Set(build.targets?.map((target: TargetConfig) => build.package?.name + target.arch + '_' + target.platform + '_' + target.toolchain + '.zip')));
 	let promisses = [];
 	if (build.package && build.package.includes && build.package.includes.length > 0)
@@ -125,4 +121,4 @@ const downloadFromServers = async (descriptor: BaseDescriptor, type: string, ser
 		throw new Error('The ' + type + ' ' + descriptor.groupId + '/' + descriptor.artifactId + '@' + descriptor.version + ' couldn\'t be found in any server.');
 };
 
-export default { getDescriptor, download, upload, downloadPackageFiles, downloadFromServers};
+export default { getDescriptor, download, upload, downloadPackageFiles, downloadFromServers, packageService};

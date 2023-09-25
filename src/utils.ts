@@ -20,7 +20,7 @@ import glob from 'glob';
 import rjson from "relaxed-json";
 import YAML from 'yaml';
 import crypto from 'crypto';
-import {BaseDescriptor, BuildConfig, PackageInfo} from './base_types';
+import {BaseDescriptor, BuildDescriptor, PackageInfo} from './base_types';
 
 const isOutdated = (sources:(string|string[]), dest:string):boolean => {
     if (typeof sources == 'string')
@@ -76,16 +76,24 @@ const getFiles = (path:string, rfiles:string[], ext?:string):void => {
 };
 
 const parseBuild = (filename: string): any => {
-	let data = fs.readFileSync(filename);
-	if (filename.toLowerCase().endsWith('.json')) {
-		let datastr = rjson.transform(data.toString());
-		return JSON.parse(datastr);
-	} else if (filename.toLowerCase().endsWith('.yml') || filename.toLowerCase().endsWith('.yaml')) {
-		return YAML.parse(data.toString());
+	try {
+		let data = fs.readFileSync(filename);
+		if (filename.toLowerCase().endsWith('.json')) {
+			let datastr = rjson.transform(data.toString());
+			return JSON.parse(datastr);
+		} else if (filename.toLowerCase().endsWith('.yml') || filename.toLowerCase().endsWith('.yaml')) {
+			return YAML.parse(data.toString());
+		}
+	} catch(_e) {
+		return null;
 	}
 };
 
-const validateBuild = (build: BuildConfig): void => {
+const writeFileSync = (filename: string, data: string) => {
+	fs.writeFileSync(filename, data);
+}
+
+const validateBuild = (build: BuildDescriptor): void => {
 	if (!(/[a-z][a-z0-9_.-]+/i).exec(build.groupId))
 		throw new Error('"'+build.groupId+'" is not a valid groupId. It must begin with a letter and be followed by numbers, letters, "_", "." or "-".');
 	if (!(/[a-z][a-z0-9_-]+/i).exec(build.artifactId))
@@ -166,4 +174,16 @@ export class PackageSet<T extends BaseDescriptor> {
 	}
 }
 
-export default {isOutdated, isDir, isFile, getFiles, parseBuild, validateBuild, checksum, compareVersion};
+const BUILD_FILES = ['./build.yml', './build.yaml', './build.json'];
+
+const findBuildFile = (): (string | undefined) => {
+	return BUILD_FILES.filter(fs.existsSync).filter(isFile)[0];
+};
+
+const PLUGIN_FILES = ['./plugin.yml', './plugin.yaml', './plugin.json'];
+
+const findPluginFile = (): (string | undefined) => {
+	return PLUGIN_FILES.filter(fs.existsSync).filter(isFile)[0];
+};
+
+export default {isOutdated, isDir, isFile, getFiles, parseBuild, validateBuild, checksum, compareVersion, findBuildFile, findPluginFile, writeFileSync};

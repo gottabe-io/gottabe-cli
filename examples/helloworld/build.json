@@ -1,8 +1,8 @@
 {
     name : 'HelloWorld',
     description: 'A simple hello world executable',
-    author:'Timotio D\'Alenbert',
-    source : 'https://github.com/timoteodal/mylib',
+    author:'Simon Randomson',
+    source : 'https://github.com/simonrandomson/mylib',
     version: '1.0',
     type : 'executable',
     dependencies : [
